@@ -1,4 +1,3 @@
-// src/types/Game.ts
 export type Position = {
   q: number; // Hex grid coordinates
   r: number;
