@@ -182,31 +182,51 @@ const gameReducer = (
         };
       }
 
-      // If a unit is selected, calculate possible moves or attacks
-      if (selectedTile.unit && selectedTile.unit.canAct) {
-        const unit = selectedTile.unit;
+      // If a unit is selected, check if it's a player's unit
+      if (selectedTile.unit) {
+        // Only allow selecting player's units, not AI units
+        if (
+          selectedTile.unit.owner !== "player" &&
+          state.gameState.currentPlayer === "player"
+        ) {
+          console.log("Cannot select enemy units during player turn");
+          return state;
+        }
 
-        // Determine possible moves
-        const possibleMoves = !unit.hasMoved
-          ? getPossibleMoves(unit, state.tiles, state.gridSize)
-          : [];
+        // Only allow selecting AI units during AI turn
+        if (
+          selectedTile.unit.owner !== "ai" &&
+          state.gameState.currentPlayer === "ai"
+        ) {
+          console.log("Cannot select player units during AI turn");
+          return state;
+        }
 
-        // Determine possible attacks
-        const possibleAttacks = !unit.hasAttacked
-          ? getPossibleAttackTargets(unit, state.tiles, state.gridSize)
-          : [];
+        if (selectedTile.unit.canAct) {
+          const unit = selectedTile.unit;
 
-        // Highlight the possible moves and attacks
-        const highlightedTiles = [...possibleMoves, ...possibleAttacks];
+          // Determine possible moves
+          const possibleMoves = !unit.hasMoved
+            ? getPossibleMoves(unit, state.tiles, state.gridSize)
+            : [];
 
-        return {
-          ...state,
-          selectedCard: null,
-          selectedTile,
-          possibleMoves,
-          possibleAttacks,
-          highlightedTiles,
-        };
+          // Determine possible attacks
+          const possibleAttacks = !unit.hasAttacked
+            ? getPossibleAttackTargets(unit, state.tiles, state.gridSize)
+            : [];
+
+          // Highlight the possible moves and attacks
+          const highlightedTiles = [...possibleMoves, ...possibleAttacks];
+
+          return {
+            ...state,
+            selectedCard: null,
+            selectedTile,
+            possibleMoves,
+            possibleAttacks,
+            highlightedTiles,
+          };
+        }
       }
 
       // Regular tile selection
@@ -230,6 +250,7 @@ const gameReducer = (
 
       // Ensure position is on player's side (negative q values)
       if (position.q >= 0) {
+        console.log("Fortresses must be placed on player's side");
         return state;
       }
 
@@ -257,7 +278,7 @@ const gameReducer = (
         highlightedTiles: [],
       };
     }
-
+    // Update this in GameContext.tsx to remove the restriction on placing units only on player's side
     case "PLACE_UNIT": {
       // Can only place units during battle phase and if a card is selected
       if (state.gameState.phase !== "battle" || !state.selectedCard) {
@@ -266,18 +287,14 @@ const gameReducer = (
 
       const position = action.payload;
 
-      // Check if position is valid (player's side)
-      if (position.q >= 0) {
-        return state;
-      }
-
-      // Check if this is a valid placement position
-      const placementPositions = getPlacementPositions(state.tiles);
-      const isValidPlacement = placementPositions.some(
+      // Only allow placement on valid tiles (near fortresses)
+      const validPlacements = getPlacementPositions(state.tiles);
+      const isValidPlacement = validPlacements.some(
         (pos) => pos.q === position.q && pos.r === position.r
       );
 
       if (!isValidPlacement) {
+        console.log("Units must be placed adjacent to player fortresses");
         return state;
       }
 
@@ -291,7 +308,7 @@ const gameReducer = (
         return state;
       }
 
-      // Make sure the card has an owner property
+      // Make sure the card has owner property
       const cardWithOwner = {
         ...state.selectedCard,
         owner: "player" as const,

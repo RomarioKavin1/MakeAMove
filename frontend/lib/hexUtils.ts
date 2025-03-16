@@ -62,19 +62,20 @@ export const isInBounds = (position: Position, gridSize: number): boolean => {
 
 // Get the distance between two hex positions
 export const getHexDistance = (a: Position, b: Position): number => {
-  // In this coordinate system, we need to convert to cube coordinates first
-  const ax = a.q;
-  const az = a.r - (a.q - (a.q % 2)) / 2;
-  const ay = -ax - az;
+  // Use cube coordinates distance formula
+  const ac = axialToCube(a);
+  const bc = axialToCube(b);
 
-  const bx = b.q;
-  const bz = b.r - (b.q - (b.q % 2)) / 2;
-  const by = -bx - bz;
-
-  return Math.max(Math.abs(ax - bx), Math.abs(ay - by), Math.abs(az - bz));
+  return Math.max(
+    Math.abs(ac.x - bc.x),
+    Math.abs(ac.y - bc.y),
+    Math.abs(ac.z - bc.z)
+  );
 };
 
 // Find all possible move positions for a unit
+// Fix for the hexUtils.ts file to allow movement into enemy territory
+
 export const getPossibleMoves = (
   unit: CardInstance,
   tiles: HexTile[],
@@ -82,131 +83,133 @@ export const getPossibleMoves = (
 ): Position[] => {
   if (!unit.position) return [];
 
-  const visited = new Set<string>();
+  // Use the unit's movement range
+  const movementRange = unit.movementRange || 1;
+  console.log(
+    `Calculating moves for unit at ${unit.position.q},${unit.position.r} with ${movementRange} move range`
+  );
+
   const possibleMoves: Position[] = [];
-  const queue: { pos: Position; movesLeft: number }[] = [
-    { pos: unit.position, movesLeft: unit.movementRange },
+  const visited = new Set<string>();
+  const queue: { pos: Position; moveCost: number }[] = [
+    { pos: unit.position, moveCost: 0 },
   ];
 
+  // BFS to find all tiles within movement range
   while (queue.length > 0) {
-    const { pos, movesLeft } = queue.shift()!;
-    const posKey = `${pos.q},${pos.r}`;
+    const { pos, moveCost } = queue.shift()!;
+    const key = `${pos.q},${pos.r}`;
 
-    // Skip if already visited
-    if (visited.has(posKey)) continue;
-    visited.add(posKey);
+    // Skip if we've visited this tile or if it's outside the unit's movement range
+    if (visited.has(key) || moveCost > movementRange) continue;
+    visited.add(key);
 
-    // Current tile is a valid move position (if not the starting position)
-    if (posKey !== `${unit.position.q},${unit.position.r}`) {
+    // If this isn't the starting position, it's a possible move
+    if (moveCost > 0) {
       possibleMoves.push(pos);
     }
 
-    // If no moves left, don't explore further
-    if (movesLeft <= 0) continue;
+    // Get all adjacent tiles
+    const neighbors = getAdjacentPositions(pos);
 
-    // Check neighbors
-    const neighbors = getNeighbors(pos);
+    // Check each neighbor
     for (const neighbor of neighbors) {
-      // Ensure neighbor is in bounds
-      if (!isInBounds(neighbor, gridSize)) continue;
+      // Skip out-of-bounds positions
+      if (
+        neighbor.q < -gridSize ||
+        neighbor.q > gridSize ||
+        neighbor.r < -gridSize ||
+        neighbor.r > gridSize
+      ) {
+        continue;
+      }
 
-      // Find the neighbor tile
-      const neighborTile = tiles.find(
-        (tile) =>
-          tile.position.q === neighbor.q && tile.position.r === neighbor.r
+      const neighborKey = `${neighbor.q},${neighbor.r}`;
+      if (visited.has(neighborKey)) continue;
+
+      // Check if this tile is valid (exists and is not occupied)
+      const tile = tiles.find(
+        (t) => t.position.q === neighbor.q && t.position.r === neighbor.r
       );
 
-      // Skip if no tile found or tile is impassable
-      if (!neighborTile || !neighborTile.terrain.isPassable) continue;
+      if (!tile) continue; // Skip if tile doesn't exist
 
-      // Skip if occupied by another unit
-      if (neighborTile.unit) continue;
+      // Skip if tile is occupied by another unit or a fortress
+      if (tile.unit && tile.unit.instanceId !== unit.instanceId) continue;
+      if (tile.fortress) continue;
 
-      // Calculate movement cost based on terrain
-      const movementCost = neighborTile.terrain.movementCost;
+      // Account for terrain movement cost
+      const additionalCost = 1;
+      const newMoveCost = moveCost + additionalCost;
 
-      // Check for terrain-specific movement penalties for this unit type
-      const terrainEffect = unit.terrainEffects.find(
-        (effect) => effect.type === neighborTile.terrain.type
-      );
-      const totalMovementCost =
-        movementCost + (terrainEffect?.movementPenalty || 0);
-
-      // Add to queue if we have enough movement left
-      if (movesLeft >= totalMovementCost) {
-        queue.push({
-          pos: neighbor,
-          movesLeft: movesLeft - totalMovementCost,
-        });
+      // If within movement range, add to queue
+      if (newMoveCost <= movementRange) {
+        queue.push({ pos: neighbor, moveCost: newMoveCost });
       }
     }
   }
 
+  console.log(`Found ${possibleMoves.length} possible moves`);
   return possibleMoves;
 };
 
 // Find placement positions for deploying new units (for player)
+// Corrected getPlacementPositions function that only allows placement adjacent to player fortresses
 export const getPlacementPositions = (tiles: HexTile[]): Position[] => {
+  // Get all empty tiles that are adjacent to friendly fortresses
   const placementPositions: Position[] = [];
 
-  // Get tiles on player side (negative q)
-  const playerSideTiles = tiles.filter(
-    (tile) =>
-      tile.position.q < 0 &&
-      tile.terrain.isPassable &&
-      !tile.unit &&
-      !tile.fortress
-  );
+  // Step 1: Find all player fortresses
+  const playerFortressPositions = tiles
+    .filter((tile) => tile.fortress && tile.fortress.owner === "player")
+    .map((tile) => tile.position);
 
-  // First priority: positions adjacent to player fortresses
-  const fortressTiles = tiles.filter(
-    (tile) => tile.fortress && tile.fortress.owner === "player"
-  );
+  // Step 2: Get all adjacent tiles to player fortresses
+  const adjacentPositions = new Set<string>();
 
-  let adjacentPositions: Position[] = [];
-
-  fortressTiles.forEach((fortressTile) => {
-    const neighbors = getNeighbors(fortressTile.position);
-    neighbors.forEach((neighborPos) => {
-      const neighborTile = tiles.find(
-        (tile) =>
-          tile.position.q === neighborPos.q && tile.position.r === neighborPos.r
-      );
-
-      if (
-        neighborTile &&
-        neighborTile.position.q < 0 &&
-        neighborTile.terrain.isPassable &&
-        !neighborTile.unit &&
-        !neighborTile.fortress
-      ) {
-        adjacentPositions.push(neighborPos);
-      }
-    });
-  });
-
-  // Remove duplicates
-  adjacentPositions = adjacentPositions.filter(
-    (pos, index, self) =>
-      index === self.findIndex((p) => p.q === pos.q && p.r === pos.r)
-  );
-
-  // Add fortress-adjacent positions first
-  placementPositions.push(...adjacentPositions);
-
-  // Then add other valid positions on player side
-  playerSideTiles.forEach((tile) => {
-    if (
-      !placementPositions.some(
-        (pos) => pos.q === tile.position.q && pos.r === tile.position.r
-      )
-    ) {
-      placementPositions.push(tile.position);
+  for (const position of playerFortressPositions) {
+    // Add all adjacent positions
+    const neighbors = getAdjacentPositions(position);
+    for (const neighbor of neighbors) {
+      adjacentPositions.add(`${neighbor.q},${neighbor.r}`);
     }
-  });
+  }
+
+  // Step 3: Filter to only include tiles that exist and are empty
+  for (const posKey of adjacentPositions) {
+    const [q, r] = posKey.split(",").map(Number);
+
+    // Find this tile
+    const tile = tiles.find((t) => t.position.q === q && t.position.r === r);
+
+    // If tile exists and is empty (no unit or fortress), it's a valid placement
+    if (tile && !tile.unit && !tile.fortress) {
+      placementPositions.push({ q, r });
+    }
+  }
 
   return placementPositions;
 };
+
+// Helper function to get adjacent positions
+function getAdjacentPositions(position: Position): Position[] {
+  const { q, r } = position;
+
+  // The 6 directions in a hex grid
+  const directions = [
+    { q: 1, r: 0 }, // Right
+    { q: 1, r: -1 }, // Top Right
+    { q: 0, r: -1 }, // Top Left
+    { q: -1, r: 0 }, // Left
+    { q: -1, r: 1 }, // Bottom Left
+    { q: 0, r: 1 }, // Bottom Right
+  ];
+
+  return directions.map((dir) => ({
+    q: q + dir.q,
+    r: r + dir.r,
+  }));
+}
 
 // Find all possible attack targets for a unit
 export const getPossibleAttackTargets = (
@@ -216,33 +219,52 @@ export const getPossibleAttackTargets = (
 ): Position[] => {
   if (!unit.position) return [];
 
+  const attackRange = unit.range || 1; // Default to range 1 if not specified
+  console.log(
+    `Calculating attack targets for unit at ${unit.position.q},${unit.position.r} with range ${attackRange}`
+  );
+
   const targets: Position[] = [];
 
-  // Get all tiles within attack range
-  const tilesInRange: HexTile[] = [];
-
-  // For each tile, check if it's within range
+  // Check each tile to see if it's within attack range
   tiles.forEach((tile) => {
+    // Skip if this is the unit's own position
+    if (
+      tile.position.q === unit.position!.q &&
+      tile.position.r === unit.position!.r
+    ) {
+      return;
+    }
+
+    // Calculate distance from unit to this tile
     const distance = getHexDistance(unit.position!, tile.position);
-    if (distance <= unit.range && distance > 0) {
-      tilesInRange.push(tile);
+
+    // If within attack range, check if there's a valid target
+    if (distance <= attackRange) {
+      // Check if tile has an enemy unit or fortress
+      const hasEnemyUnit = tile.unit && tile.unit.owner !== unit.owner;
+      const hasEnemyFortress =
+        tile.fortress && tile.fortress.owner !== unit.owner;
+
+      // Add to targets if there's an enemy unit or fortress
+      if (hasEnemyUnit || hasEnemyFortress) {
+        targets.push(tile.position);
+      }
     }
   });
 
-  // Check each tile for enemy units or fortresses
-  tilesInRange.forEach((tile) => {
-    // If the tile has an enemy unit
-    if (tile.unit && isEnemy(unit, tile.unit)) {
-      targets.push(tile.position);
-    }
-
-    // If the tile has an enemy fortress
-    if (tile.fortress && isEnemyFortress(unit, tile.fortress)) {
-      targets.push(tile.position);
-    }
-  });
-
+  console.log(`Found ${targets.length} possible attack targets`);
   return targets;
+};
+
+// Make sure you have this function to calculate hex distance
+
+// Helper to convert axial to cube coordinates
+const axialToCube = (axial: Position) => {
+  const x = axial.q;
+  const z = axial.r;
+  const y = -x - z;
+  return { x, y, z };
 };
 
 // Helper function to check if a unit is an enemy

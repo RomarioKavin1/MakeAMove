@@ -30,6 +30,55 @@ const BattlePage: React.FC = () => {
   const [aiActionMessage, setAiActionMessage] = useState<string>("");
   const [placementTiles, setPlacementTiles] = useState<Position[]>([]);
   const [tileDetailsOpen, setTileDetailsOpen] = useState<boolean>(false);
+  const [attackTarget, setAttackTarget] = useState<Position | null>(null);
+
+  // Update when selectedTile or possibleAttacks changes
+  useEffect(() => {
+    // If there are possible attacks and a selected tile with a unit, set first attack target
+    console.log({
+      canAttack:
+        possibleAttacks.length > 0 &&
+        !!selectedTile?.unit &&
+        !selectedTile.unit.hasAttacked,
+      hasAttacks: possibleAttacks.length > 0,
+      hasSelectedUnit: !!selectedTile?.unit,
+      notAttacked: selectedTile?.unit ? !selectedTile.unit.hasAttacked : false,
+      attackTarget,
+    });
+    if (possibleAttacks.length > 0 && selectedTile?.unit) {
+      setAttackTarget(possibleAttacks[0]);
+      console.log("Possible attacks:", possibleAttacks);
+    } else {
+      setAttackTarget(null);
+      console.log("Possible attacks:", possibleAttacks);
+    }
+  }, [selectedTile, possibleAttacks]);
+  const handleAttack = () => {
+    if (!attackTarget || !selectedTile?.unit) return;
+
+    // Start attack animation
+    dispatch({
+      type: "UNIT_ANIMATION_START",
+      payload: {
+        unitId: selectedTile.unit.instanceId,
+        state: "attack",
+        target: attackTarget,
+      },
+    });
+
+    // Delay the actual attack to allow animation to play
+    setTimeout(() => {
+      dispatch({ type: "ATTACK", payload: attackTarget });
+
+      // End animation
+      setTimeout(() => {
+        dispatch({
+          type: "UNIT_ANIMATION_END",
+          payload: { unitId: selectedTile.unit!.instanceId },
+        });
+      }, 700); // Animation completion time
+    }, 600); // Animation start delay
+  };
 
   // Update placement tiles when a card is selected
   useEffect(() => {
@@ -115,6 +164,7 @@ const BattlePage: React.FC = () => {
   ]);
 
   // Handle tile click
+  // Update the handleTileClick function for improved animations
   const handleTileClick = (tile: HexTile) => {
     if (gameState.phase === "setup") {
       // In setup phase, clicking a tile places a fortress
@@ -126,15 +176,29 @@ const BattlePage: React.FC = () => {
       return;
     }
 
+    const isAttackTarge = possibleAttacks.some(
+      (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+    );
+
+    if (isAttackTarge) {
+      // Set this as the attack target but don't immediately attack
+      setAttackTarget(tile.position);
+      return;
+    }
     // If a card is selected, try to place it
     if (selectedCard) {
-      // Check if this is a valid placement tile
-      const isValidPlacement = placementTiles.some(
+      // Check if this is a valid placement tile by finding valid placements
+      const placementPositions = getPlacementPositions(tiles);
+      const isValidPlacement = placementPositions.some(
         (pos) => pos.q === tile.position.q && pos.r === tile.position.r
       );
 
       if (isValidPlacement) {
         dispatch({ type: "PLACE_UNIT", payload: tile.position });
+      } else {
+        console.log(
+          "Cannot place unit here - must be adjacent to a player fortress"
+        );
       }
       return;
     }
@@ -155,18 +219,20 @@ const BattlePage: React.FC = () => {
         },
       });
 
-      // Delay the actual move to allow animation to play
+      // For walking animation to be visible, we use a long delay
+      // to allow player to see the walking animation
       setTimeout(() => {
+        // Move the unit after animation plays for a moment
         dispatch({ type: "MOVE_UNIT", payload: tile.position });
 
-        // End animation after the move is complete
+        // End animation after the move with a short delay
         setTimeout(() => {
           dispatch({
             type: "UNIT_ANIMATION_END",
             payload: { unitId: selectedTile.unit!.instanceId },
           });
-        }, 300); // Short delay to ensure walking animation is seen
-      }, 400); // Increased from 200ms for better animation timing
+        }, 500); // Animation end delay
+      }, 1000); // Long delay to see walking animation
 
       return;
     }
@@ -191,14 +257,14 @@ const BattlePage: React.FC = () => {
       setTimeout(() => {
         dispatch({ type: "ATTACK", payload: tile.position });
 
-        // End animation
+        // End animation after a delay
         setTimeout(() => {
           dispatch({
             type: "UNIT_ANIMATION_END",
             payload: { unitId: selectedTile.unit!.instanceId },
           });
-        }, 500); // Animation completion time
-      }, 300); // Animation start delay
+        }, 700); // Animation end delay
+      }, 600); // Attack delay
 
       return;
     }
@@ -298,7 +364,14 @@ const BattlePage: React.FC = () => {
             <div className="absolute bottom-4 right-4">
               <BattleControls
                 onEndTurn={handleEndTurn}
+                onAttack={handleAttack}
                 isPlayerTurn={gameState.currentPlayer === "player"}
+                canAttack={
+                  possibleAttacks.length > 0 &&
+                  !!selectedTile?.unit &&
+                  !selectedTile.unit.hasAttacked
+                }
+                attackTarget={attackTarget || undefined}
               />
             </div>
           )}
