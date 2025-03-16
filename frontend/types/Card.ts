@@ -49,4 +49,5 @@ export type CardInstance = Card & {
   canAct: boolean;
   hasAttacked: boolean;
   hasMoved: boolean;
+  owner: "player" | "ai"; // Add this property to fix the errors
 };

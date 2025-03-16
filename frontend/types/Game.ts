@@ -1,3 +1,5 @@
+import { Card } from "./Card";
+
 // src/types/Game.ts
 export type Position = {
   q: number; // Hex grid coordinates
@@ -12,6 +14,22 @@ export type GameState = {
   winner: "player" | "ai" | null;
 };
 
+export type AnimationState = "idle" | "attack" | "walk";
+export type AnimationDirection = "left" | "right";
+
+export interface UnitAnimation {
+  state: AnimationState;
+  target?: Position;
+  direction: AnimationDirection;
+}
+export type CardInstance = Card & {
+  instanceId: string;
+  position: Position | null;
+  canAct: boolean;
+  hasAttacked: boolean;
+  hasMoved: boolean;
+  owner: "player" | "ai"; // This is the property being added
+};
 export interface Fortress {
   id: string;
   owner: "player" | "ai";
