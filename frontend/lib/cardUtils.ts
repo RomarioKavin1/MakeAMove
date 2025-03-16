@@ -11,7 +11,7 @@ const cardDatabase: Card[] = [
     name: "Elite Guardian",
     type: "warrior",
     description: "A stalwart defender with enhanced capabilities in mountains.",
-    imageUrl: "/assets/cards/warrior-1.png",
+    imageUrl: "/assets/cards/warrior-1.gif",
     rarity: "rare",
     attack: 4,
     health: 8,

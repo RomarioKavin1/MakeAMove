@@ -11,12 +11,7 @@ export const runMockAI = (
   tiles: HexTile[],
   aiUnits: CardInstance[],
   aiCards: CardInstance[]
-): {
-  gameState: GameState;
-  tiles: HexTile[];
-  aiUnits: CardInstance[];
-  message: string;
-} => {
+): { tiles: HexTile[]; aiUnits: CardInstance[]; message: string } => {
   // Copy state to avoid mutations
   let updatedTiles = [...tiles];
   let updatedAiUnits = [...aiUnits];
@@ -50,12 +45,8 @@ export const runMockAI = (
 
       message = `AI deployed a ${deployCard.type}`;
 
-      // Remove the card from AI's hand (would be handled by your game state management)
-      // aiCards = aiCards.filter(card => card.instanceId !== deployCard.instanceId);
-
       // Return early to simulate turn-based deployment
       return {
-        gameState,
         tiles: updatedTiles,
         aiUnits: updatedAiUnits,
         message,
@@ -118,7 +109,6 @@ export const runMockAI = (
 
         // Return early to simulate turn-based actions
         return {
-          gameState,
           tiles: updatedTiles,
           aiUnits: updatedAiUnits,
           message,
@@ -155,7 +145,6 @@ export const runMockAI = (
 
       // Return early to simulate turn-based actions
       return {
-        gameState,
         tiles: updatedTiles,
         aiUnits: updatedAiUnits,
         message,
@@ -167,7 +156,6 @@ export const runMockAI = (
   message = "AI ended turn";
 
   return {
-    gameState,
     tiles: updatedTiles,
     aiUnits: updatedAiUnits,
     message,

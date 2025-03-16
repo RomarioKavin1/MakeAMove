@@ -21,9 +21,10 @@ import {
   generateHexGrid,
   getPossibleMoves,
   getPossibleAttackTargets,
+  getPlacementPositions,
 } from "@/lib/hexUtils";
 import { sampleCards } from "@/lib/cardUtils";
-import { runMockAI } from "@/lib/mockAi";
+import { runMockAI } from "@/lib/mockAI";
 import { GameState, Position } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
 
@@ -44,9 +45,16 @@ interface GameContextState {
   highlightedTiles: Position[];
   placedFortresses: number;
   aiMessage: string;
+  unitAnimations: Record<
+    string,
+    {
+      state: "idle" | "attack" | "walk";
+      target?: Position;
+    }
+  >;
 }
 
-// Add the missing action type for starting battle phase
+// Define actions
 type GameAction =
   | { type: "INITIALIZE_GAME" }
   | { type: "SELECT_CARD"; payload: CardInstance | null }
@@ -62,7 +70,16 @@ type GameAction =
       payload: { tiles: HexTile[]; aiUnits: CardInstance[]; message: string };
     }
   | { type: "SET_HIGHLIGHTED_TILES"; payload: Position[] }
-  | { type: "START_BATTLE_PHASE" };
+  | { type: "START_BATTLE_PHASE" }
+  | {
+      type: "UNIT_ANIMATION_START";
+      payload: {
+        unitId: string;
+        state: "idle" | "attack" | "walk";
+        target?: Position;
+      };
+    }
+  | { type: "UNIT_ANIMATION_END"; payload: { unitId: string } };
 
 // Initial state
 const initialState: GameContextState = {
@@ -83,10 +100,11 @@ const initialState: GameContextState = {
   selectedTile: null,
   possibleMoves: [],
   possibleAttacks: [],
-  gridSize: 5, // Size of the hex grid (radius)
+  gridSize: 5, // Size of the hex grid
   highlightedTiles: [],
   placedFortresses: 0,
   aiMessage: "",
+  unitAnimations: {},
 };
 
 // Create the context
@@ -135,6 +153,7 @@ const gameReducer = (
         highlightedTiles: [],
         placedFortresses: 0,
         aiMessage: "",
+        unitAnimations: {},
       };
     }
 
@@ -254,6 +273,16 @@ const gameReducer = (
         return state;
       }
 
+      // Check if this is a valid placement position
+      const placementPositions = getPlacementPositions(state.tiles);
+      const isValidPlacement = placementPositions.some(
+        (pos) => pos.q === position.q && pos.r === position.r
+      );
+
+      if (!isValidPlacement) {
+        return state;
+      }
+
       // Check if position is already occupied
       const targetTile = state.tiles.find(
         (tile) =>
@@ -370,7 +399,7 @@ const gameReducer = (
       }
 
       // Perform the attack
-      const { tiles, attacker } = performAttack(
+      const { tiles, attacker, damageDealt } = performAttack(
         state.tiles,
         state.selectedTile.unit,
         targetPosition
@@ -469,6 +498,31 @@ const gameReducer = (
         gameState: {
           ...state.gameState,
           phase: "battle",
+        },
+      };
+    }
+
+    case "UNIT_ANIMATION_START": {
+      return {
+        ...state,
+        unitAnimations: {
+          ...state.unitAnimations,
+          [action.payload.unitId]: {
+            state: action.payload.state,
+            target: action.payload.target,
+          },
+        },
+      };
+    }
+
+    case "UNIT_ANIMATION_END": {
+      const { [action.payload.unitId]: _, ...restAnimations } =
+        state.unitAnimations;
+      return {
+        ...state,
+        unitAnimations: {
+          ...restAnimations,
+          [action.payload.unitId]: { state: "idle" },
         },
       };
     }

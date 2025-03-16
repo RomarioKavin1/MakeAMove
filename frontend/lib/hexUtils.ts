@@ -51,10 +51,10 @@ export const getNeighbors = (position: Position): Position[] => {
 
 // Check if position is within grid bounds
 export const isInBounds = (position: Position, gridSize: number): boolean => {
-  // For a rectangular grid with width of 5 and height of 10
+  // For a 10x10 grid centered around 0,0
   return (
-    position.q >= -2 &&
-    position.q <= 2 && // 5 columns (-2 to 2)
+    position.q >= -5 &&
+    position.q <= 4 && // 10 columns (-5 to 4)
     position.r >= -5 &&
     position.r <= 4
   ); // 10 rows (-5 to 4)
@@ -145,6 +145,69 @@ export const getPossibleMoves = (
   return possibleMoves;
 };
 
+// Find placement positions for deploying new units (for player)
+export const getPlacementPositions = (tiles: HexTile[]): Position[] => {
+  const placementPositions: Position[] = [];
+
+  // Get tiles on player side (negative q)
+  const playerSideTiles = tiles.filter(
+    (tile) =>
+      tile.position.q < 0 &&
+      tile.terrain.isPassable &&
+      !tile.unit &&
+      !tile.fortress
+  );
+
+  // First priority: positions adjacent to player fortresses
+  const fortressTiles = tiles.filter(
+    (tile) => tile.fortress && tile.fortress.owner === "player"
+  );
+
+  let adjacentPositions: Position[] = [];
+
+  fortressTiles.forEach((fortressTile) => {
+    const neighbors = getNeighbors(fortressTile.position);
+    neighbors.forEach((neighborPos) => {
+      const neighborTile = tiles.find(
+        (tile) =>
+          tile.position.q === neighborPos.q && tile.position.r === neighborPos.r
+      );
+
+      if (
+        neighborTile &&
+        neighborTile.position.q < 0 &&
+        neighborTile.terrain.isPassable &&
+        !neighborTile.unit &&
+        !neighborTile.fortress
+      ) {
+        adjacentPositions.push(neighborPos);
+      }
+    });
+  });
+
+  // Remove duplicates
+  adjacentPositions = adjacentPositions.filter(
+    (pos, index, self) =>
+      index === self.findIndex((p) => p.q === pos.q && p.r === pos.r)
+  );
+
+  // Add fortress-adjacent positions first
+  placementPositions.push(...adjacentPositions);
+
+  // Then add other valid positions on player side
+  playerSideTiles.forEach((tile) => {
+    if (
+      !placementPositions.some(
+        (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+      )
+    ) {
+      placementPositions.push(tile.position);
+    }
+  });
+
+  return placementPositions;
+};
+
 // Find all possible attack targets for a unit
 export const getPossibleAttackTargets = (
   unit: CardInstance,
@@ -199,7 +262,7 @@ const isEnemyFortress = (unit: CardInstance, fortress: any): boolean => {
   return isUnitPlayer ? fortress.owner === "ai" : fortress.owner === "player";
 };
 
-// Create a simplified hex grid for 5x10 battlefield
+// Create terrain types with biome regions for a 10x10 grid
 export const generateHexGrid = (gridSize: number): HexTile[] => {
   const tiles: HexTile[] = [];
   const terrainTypes: TerrainType[] = [
@@ -265,31 +328,48 @@ export const generateHexGrid = (gridSize: number): HexTile[] => {
     },
   };
 
-  // Create a 5x10 grid
-  // q from -2 to 2 (5 columns)
-  // r from -5 to 4 (10 rows)
-  for (let q = -2; q <= 2; q++) {
+  // Create the terrain with biome regions
+  // Use simplex noise or other methods to create coherent terrain patterns
+  for (let q = -5; q <= 4; q++) {
     for (let r = -5; r <= 4; r++) {
       // Create a new tile at this position
       const position = { q, r };
 
-      // Determine terrain type
+      // Generate terrain based on position (creating biome regions)
       let terrainType: TerrainType;
 
-      // Create distinct zones for player and AI sides
-      if (q < 0) {
-        // Player side (negative q) - more forests and plains
-        terrainType = Math.random() > 0.7 ? "forest" : "plains";
-      } else if (q > 0) {
-        // AI side (positive q) - more desert and mountain
-        terrainType = Math.random() > 0.7 ? "desert" : "plains";
-      } else {
-        // Middle column - mixed terrain with some water obstacles
-        terrainType = Math.random() > 0.7 ? "water" : "plains";
+      // Simple biome regions
+      // Player side (forest/plains biome)
+      if (q < -2) {
+        terrainType = Math.random() > 0.65 ? "forest" : "plains";
+      }
+      // Middle contested area (mixed terrain)
+      else if (q >= -2 && q <= 1) {
+        const rand = Math.random();
+        if (rand < 0.5) {
+          terrainType = "plains";
+        } else if (rand < 0.7) {
+          terrainType = "forest";
+        } else if (rand < 0.8) {
+          terrainType = "mountain";
+        } else if (rand < 0.9) {
+          terrainType = "water";
+        } else {
+          terrainType = "swamp";
+        }
+      }
+      // AI side (desert/mountain biome)
+      else {
+        terrainType = Math.random() > 0.65 ? "desert" : "plains";
       }
 
-      // Add healing tiles (one per side)
-      if ((q == -2 && r == -2) || (q == 2 && r == 2)) {
+      // Create a small river across the middle
+      if ((q === 0 || q === -1) && r >= -3 && r <= 2 && Math.random() > 0.5) {
+        terrainType = "water";
+      }
+
+      // Add healing tiles (one per side in strategic locations)
+      if ((q === -4 && r === 0) || (q === 3 && r === 0)) {
         terrainType = "healing";
       }
 
