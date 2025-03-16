@@ -1,12 +1,13 @@
-// src/app/battle/page.tsx
 "use client";
-
 import React, { useState, useEffect } from "react";
 import { useGame } from "@/context/GameContext";
 import HexGrid from "@/components/game/HexGrid";
 import Card from "@/components/game/Card";
 import BattleControls from "@/components/game/BattleControls";
 import { CardInstance } from "@/types/Card";
+import { getPlacementPositions } from "@/lib/hexUtils";
+import styles from "./Battle.module.css";
+import { Position } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
 
 const BattlePage: React.FC = () => {
@@ -22,10 +23,21 @@ const BattlePage: React.FC = () => {
     highlightedTiles,
     placedFortresses,
     aiMessage,
+    unitAnimations,
   } = state;
 
   const [message, setMessage] = useState<string>("");
   const [aiActionMessage, setAiActionMessage] = useState<string>("");
+  const [placementTiles, setPlacementTiles] = useState<Position[]>([]);
+
+  // Update placement tiles when a card is selected
+  useEffect(() => {
+    if (selectedCard) {
+      setPlacementTiles(getPlacementPositions(tiles));
+    } else {
+      setPlacementTiles([]);
+    }
+  }, [selectedCard, tiles]);
 
   // Show AI action message when it changes
   useEffect(() => {
@@ -50,10 +62,7 @@ const BattlePage: React.FC = () => {
         // Auto proceed to battle phase once fortresses are placed
         setMessage("Fortresses placed. Starting battle...");
 
-        // In a real implementation, the AI would place its fortresses here
-        // For the MVP, we'll just transition to battle phase
         setTimeout(() => {
-          // Transition to battle phase
           dispatch({ type: "START_BATTLE_PHASE" });
         }, 2000);
       }
@@ -111,7 +120,14 @@ const BattlePage: React.FC = () => {
 
     // If a card is selected, try to place it
     if (selectedCard) {
-      dispatch({ type: "PLACE_UNIT", payload: tile.position });
+      // Check if this is a valid placement tile
+      const isValidPlacement = placementTiles.some(
+        (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+      );
+
+      if (isValidPlacement) {
+        dispatch({ type: "PLACE_UNIT", payload: tile.position });
+      }
       return;
     }
 
@@ -120,8 +136,28 @@ const BattlePage: React.FC = () => {
       (pos) => pos.q === tile.position.q && pos.r === tile.position.r
     );
 
-    if (isMoveDestination) {
-      dispatch({ type: "MOVE_UNIT", payload: tile.position });
+    if (isMoveDestination && selectedTile?.unit) {
+      // Start walk animation before actual move
+      dispatch({
+        type: "UNIT_ANIMATION_START",
+        payload: {
+          unitId: selectedTile.unit.instanceId,
+          state: "walk",
+          target: tile.position,
+        },
+      });
+
+      // Delay the actual move to allow animation to play
+      setTimeout(() => {
+        dispatch({ type: "MOVE_UNIT", payload: tile.position });
+
+        // End animation
+        dispatch({
+          type: "UNIT_ANIMATION_END",
+          payload: { unitId: selectedTile.unit!.instanceId },
+        });
+      }, 500); // Animation duration
+
       return;
     }
 
@@ -130,8 +166,28 @@ const BattlePage: React.FC = () => {
       (pos) => pos.q === tile.position.q && pos.r === tile.position.r
     );
 
-    if (isAttackTarget) {
-      dispatch({ type: "ATTACK", payload: tile.position });
+    if (isAttackTarget && selectedTile?.unit) {
+      // Start attack animation before actual attack
+      dispatch({
+        type: "UNIT_ANIMATION_START",
+        payload: {
+          unitId: selectedTile.unit.instanceId,
+          state: "attack",
+          target: tile.position,
+        },
+      });
+
+      // Delay the actual attack to allow animation to play
+      setTimeout(() => {
+        dispatch({ type: "ATTACK", payload: tile.position });
+
+        // End animation
+        dispatch({
+          type: "UNIT_ANIMATION_END",
+          payload: { unitId: selectedTile.unit!.instanceId },
+        });
+      }, 800); // Animation duration
+
       return;
     }
 
@@ -198,7 +254,8 @@ const BattlePage: React.FC = () => {
             tiles={tiles}
             onTileClick={handleTileClick}
             selectedTile={selectedTile!}
-            highlightedTiles={highlightedTiles}
+            highlightedTiles={[...highlightedTiles, ...placementTiles]}
+            selectedCard={selectedCard}
             size={40} // Size of hexagons
           />
 
@@ -218,7 +275,14 @@ const BattlePage: React.FC = () => {
           <h2 className="text-white text-lg font-bold mb-4">Your Cards</h2>
           <div className="flex flex-col space-y-4">
             {playerHand.map((card) => (
-              <div key={card.instanceId}>
+              <div
+                key={card.instanceId}
+                className={`transition-all duration-200 ${
+                  selectedCard?.instanceId === card.instanceId
+                    ? "transform scale-105 ring-2 ring-blue-400 rounded-lg"
+                    : ""
+                }`}
+              >
                 <Card
                   card={card}
                   onClick={() => handleCardSelect(card)}

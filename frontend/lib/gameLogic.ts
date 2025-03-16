@@ -1,13 +1,11 @@
 // src/lib/gameLogic.ts
+import { GameState, HexTile, Position, Fortress } from "@/types/Game";
 import { CardInstance, Card } from "@/types/Card";
 import {
   getHexDistance,
   getPossibleMoves,
   getPossibleAttackTargets,
 } from "./hexUtils";
-import { Fortress } from "@/types/Fortress";
-import { GameState, Position } from "@/types/Game";
-import { HexTile } from "@/types/Terrain";
 
 // Initialize a new game state
 export const initializeGame = (
@@ -257,7 +255,7 @@ export const performAttack = (
 
     // Check for terrain-specific defense bonuses
     const targetTerrainEffect = targetUnit.terrainEffects.find(
-      (effect) => effect.type === targetTile.terrain.type
+      (effect: { type: string }) => effect.type === targetTile.terrain.type
     );
     if (targetTerrainEffect?.defenseBonus) {
       defenseValue += targetTerrainEffect.defenseBonus;
@@ -331,15 +329,15 @@ export const performAttack = (
   };
 
   // Update attacker on its tile
-  const attackerPositionIndex = updatedTiles.findIndex(
+  const attackerPositionTileIndex = updatedTiles.findIndex(
     (tile) =>
       tile.position.q === updatedAttacker.position!.q &&
       tile.position.r === updatedAttacker.position!.r
   );
 
-  if (attackerPositionIndex !== -1) {
-    updatedTiles[attackerPositionIndex] = {
-      ...updatedTiles[attackerPositionIndex],
+  if (attackerPositionTileIndex !== -1) {
+    updatedTiles[attackerPositionTileIndex] = {
+      ...updatedTiles[attackerPositionTileIndex],
       unit: updatedAttacker,
     };
   }
@@ -500,4 +498,50 @@ export const endAITurn = (
   const updatedTiles = resetUnitsForNewTurn(tiles, "player");
 
   return { gameState: updatedGameState, tiles: updatedTiles };
+};
+
+// Animated version of moveUnit that supports callbacks for animation
+export const moveUnitWithAnimation = (
+  tiles: HexTile[],
+  unit: CardInstance,
+  targetPosition: Position,
+  onStartAnimation: () => void,
+  onCompleteAnimation: () => void
+): { tiles: HexTile[]; unit: CardInstance } => {
+  // Trigger animation start
+  onStartAnimation();
+
+  // Regular move logic
+  const result = moveUnit(tiles, unit, targetPosition);
+
+  // In a real implementation, you would wait for animation to complete
+  // before updating the game state
+  setTimeout(() => {
+    onCompleteAnimation();
+  }, 500); // Animation duration
+
+  return result;
+};
+
+// Animated version of performAttack that supports callbacks for animation
+export const performAttackWithAnimation = (
+  tiles: HexTile[],
+  attacker: CardInstance,
+  targetPosition: Position,
+  onStartAnimation: () => void,
+  onCompleteAnimation: () => void
+): { tiles: HexTile[]; attacker: CardInstance; damageDealt: number } => {
+  // Trigger animation start
+  onStartAnimation();
+
+  // Regular attack logic
+  const result = performAttack(tiles, attacker, targetPosition);
+
+  // In a real implementation, you would wait for animation to complete
+  // before updating the game state
+  setTimeout(() => {
+    onCompleteAnimation();
+  }, 800); // Animation duration
+
+  return result;
 };
