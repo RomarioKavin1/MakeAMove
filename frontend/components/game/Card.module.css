@@ -1,0 +1,209 @@
+/* src/components/game/Card.module.css */
+
+.card {
+  position: relative;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.selected {
+  transform: scale(1.05);
+  box-shadow: 0 0 0 2px #fbbf24, 0 10px 15px -3px rgba(59, 130, 246, 0.5);
+}
+
+/* Card 3D effect elements */
+.cardTop {
+  position: absolute;
+  inset: 0.5px;
+  border-radius: 0.5rem;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), transparent);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.cardHighlight {
+  position: absolute;
+  inset-x: 0;
+  top: 0;
+  height: 33.333333%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Card content sections */
+.cardHeader {
+  padding: 0.25rem 0.5rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  text-align: center;
+  position: relative;
+  z-index: 10;
+}
+
+.cardTitle {
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardImageContainer {
+  height: 50%;
+  position: relative;
+  overflow: hidden;
+}
+
+.cardImage {
+  object-fit: cover;
+  transition: transform 0.7s ease;
+}
+
+.cardImage:hover {
+  transform: scale(1.1);
+}
+
+.cardType {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  padding: 0 0.25rem;
+  border-bottom-right-radius: 0.25rem;
+  font-size: 0.75rem;
+  color: white;
+  z-index: 10;
+}
+
+.cardRarity {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 0.125rem 0.375rem;
+  border-bottom-left-radius: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.6);
+  font-size: 0.75rem;
+}
+
+/* Card stat indicators */
+.cardStats {
+  padding: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.statIndicator {
+  display: flex;
+  align-items: center;
+}
+
+.statDot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  margin-right: 0.25rem;
+  box-shadow: 0 1px 2px 0 rgba(255, 255, 255, 0.2);
+}
+
+.attackDot {
+  background-color: rgb(239, 68, 68);
+}
+
+.healthDot {
+  background-color: rgb(34, 197, 94);
+}
+
+.rangeDot {
+  background-color: rgb(59, 130, 246);
+}
+
+/* Card description */
+.cardDescription {
+  padding: 0.25rem;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 0.75rem;
+  max-height: 25%;
+  overflow-y: auto;
+}
+
+.descriptionText {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Special ability section */
+.specialAbility {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: rgba(126, 34, 206, 0.7);
+  padding: 0.125rem 0.25rem;
+  color: white;
+  font-size: 0.75rem;
+}
+
+.abilityIndicator {
+  display: flex;
+  align-items: center;
+}
+
+.abilityDot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: rgb(192, 132, 252);
+  border-radius: 9999px;
+  margin-right: 0.25rem;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Selection glow effect */
+.selectionGlow {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  z-index: 0;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.glowGradient {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(251, 191, 36, 0.3),
+    rgba(217, 119, 6, 0.3)
+  );
+}
+
+/* Animations */
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

@@ -1,15 +1,18 @@
 // src/components/game/HexGrid.tsx
-import React, { useEffect, useState, useRef } from "react";
-import { calculateHexPosition } from "@/lib/hexUtils";
-import { HexTile } from "@/types/Terrain";
+import React, { useEffect, useState, useRef, useCallback } from "react";
+import { calculateHexPosition, getPlacementPositions } from "@/lib/hexUtils";
+import styles from "./HexGrid.module.css";
 import { Position } from "@/types/Game";
+import { HexTile } from "@/types/Terrain";
 
 interface HexGridProps {
   tiles: HexTile[];
   onTileClick: (tile: HexTile) => void;
   selectedTile?: HexTile;
   highlightedTiles?: Position[];
+  selectedCard?: any; // To know if we're placing a unit
   size: number;
+  showDividingLine?: boolean; // New prop for the dividing line
 }
 
 const HexGrid: React.FC<HexGridProps> = ({
@@ -17,10 +20,40 @@ const HexGrid: React.FC<HexGridProps> = ({
   onTileClick,
   selectedTile,
   highlightedTiles = [],
+  selectedCard,
   size,
+  showDividingLine = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState("-500 -400 1000 800");
+  const [transform, setTransform] = useState("scale(1) translate(0, 0)");
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [placementPositions, setPlacementPositions] = useState<Position[]>([]);
+  const [gridBoundaries, setGridBoundaries] = useState({
+    minX: 0,
+    minY: 0,
+    maxX: 0,
+    maxY: 0,
+    width: 0,
+    height: 0,
+  });
+
+  // Animation states for units
+  const [unitStates, setUnitStates] = useState<
+    Record<string, "idle" | "attack" | "walk">
+  >({});
+
+  // Calculate placement positions when placing a unit
+  useEffect(() => {
+    if (selectedCard) {
+      setPlacementPositions(getPlacementPositions(tiles));
+    } else {
+      setPlacementPositions([]);
+    }
+  }, [selectedCard, tiles]);
 
   // Calculate boundaries of the grid
   useEffect(() => {
@@ -50,8 +83,61 @@ const HexGrid: React.FC<HexGridProps> = ({
     const width = maxX - minX;
     const height = maxY - minY;
 
+    setGridBoundaries({ minX, minY, maxX, maxY, width, height });
     setViewBox(`${minX} ${minY} ${width} ${height}`);
   }, [tiles, size]);
+
+  // Handle wheel zoom
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+
+      // Calculate new zoom level
+      const zoomStep = 0.1;
+      const newZoom =
+        e.deltaY > 0
+          ? Math.max(0.5, zoom - zoomStep) // Zoom out (minimum 0.5)
+          : Math.min(2.0, zoom + zoomStep); // Zoom in (maximum 2.0)
+
+      setZoom(newZoom);
+
+      // Update transform
+      setTransform(`scale(${newZoom}) translate(${pan.x}px, ${pan.y}px)`);
+    },
+    [zoom, pan]
+  );
+
+  // Handle mouse down for panning
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left mouse button
+
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // Handle mouse move for panning
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging) return;
+
+      const dx = (e.clientX - dragStart.x) / zoom;
+      const dy = (e.clientY - dragStart.y) / zoom;
+
+      setPan({ x: pan.x + dx, y: pan.y + dy });
+      setDragStart({ x: e.clientX, y: e.clientY });
+
+      // Update transform
+      setTransform(
+        `scale(${zoom}) translate(${pan.x + dx}px, ${pan.y + dy}px)`
+      );
+    },
+    [isDragging, dragStart, zoom, pan]
+  );
+
+  // Handle mouse up to end panning
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
 
   // Generate the points for a flat-topped hexagon
   const getHexPoints = (size: number): string => {
@@ -66,173 +152,450 @@ const HexGrid: React.FC<HexGridProps> = ({
     return points.join(" ");
   };
 
+  // Simulate unit action (for animations)
+  const simulateUnitAction = useCallback(
+    (unitId: string, action: "idle" | "attack" | "walk") => {
+      setUnitStates((prev) => ({ ...prev, [unitId]: action }));
+
+      // Return to idle after animation completes
+      if (action !== "idle") {
+        setTimeout(
+          () => {
+            setUnitStates((prev) => ({ ...prev, [unitId]: "idle" }));
+          },
+          action === "attack" ? 1000 : 500
+        ); // Animation durations
+      }
+    },
+    []
+  );
+
+  // Reset view to center
+  const resetView = useCallback(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+    setTransform("scale(1) translate(0, 0)");
+  }, []);
+
   return (
-    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
-      <svg
-        width="100%"
-        height="100%"
-        viewBox={viewBox}
-        preserveAspectRatio="xMidYMid meet"
+    <div className="relative w-full h-full overflow-hidden" ref={containerRef}>
+      {/* Zoom Controls */}
+      <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <button
+          className="bg-gray-800 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700"
+          onClick={() => {
+            const newZoom = Math.min(2.0, zoom + 0.1);
+            setZoom(newZoom);
+            setTransform(`scale(${newZoom}) translate(${pan.x}px, ${pan.y}px)`);
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button
+          className="bg-gray-800 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700"
+          onClick={() => {
+            const newZoom = Math.max(0.5, zoom - 0.1);
+            setZoom(newZoom);
+            setTransform(`scale(${newZoom}) translate(${pan.x}px, ${pan.y}px)`);
+          }}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button
+          className="bg-gray-800 text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-gray-700"
+          onClick={resetView}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+            <line x1="8" y1="12" x2="16" y2="12"></line>
+          </svg>
+        </button>
+      </div>
+
+      {/* Main SVG Canvas */}
+      <div
+        className={`w-full h-full ${
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
-        <defs>
-          {/* Define patterns for terrain types */}
-          <pattern
-            id="plains-pattern"
-            patternUnits="userSpaceOnUse"
-            width="30"
-            height="30"
-            patternTransform="rotate(45)"
-          >
-            <rect width="30" height="30" fill="#a3c095" />
-            <path
-              d="M0 0 L10 0 L5 5 Z"
-              fill="#8aaf7a"
-              transform="translate(10,10)"
-            />
-          </pattern>
-
-          <pattern
-            id="forest-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#2e6930" />
-            <circle cx="10" cy="10" r="5" fill="#1d4d1d" />
-          </pattern>
-
-          <pattern
-            id="mountain-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#8b7355" />
-            <path d="M0 20 L10 0 L20 20 Z" fill="#6d5a43" />
-          </pattern>
-
-          <pattern
-            id="water-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#4682B4" />
-            <path
-              d="M0 10 Q5 5, 10 10 T 20 10"
-              stroke="#3a6d96"
-              fill="none"
-              strokeWidth="2"
-            />
-          </pattern>
-
-          <pattern
-            id="desert-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#e9c98f" />
-            <circle cx="5" cy="5" r="1" fill="#be9c69" />
-            <circle cx="15" cy="15" r="1" fill="#be9c69" />
-          </pattern>
-
-          <pattern
-            id="swamp-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#5a603f" />
-            <circle cx="10" cy="10" r="3" fill="#404626" />
-          </pattern>
-
-          <pattern
-            id="healing-pattern"
-            patternUnits="userSpaceOnUse"
-            width="20"
-            height="20"
-          >
-            <rect width="20" height="20" fill="#90e0ef" />
-            <path
-              d="M8 5 L12 5 L12 8 L15 8 L15 12 L12 12 L12 15 L8 15 L8 12 L5 12 L5 8 L8 8 Z"
-              fill="#48cae4"
-            />
-          </pattern>
-        </defs>
-
-        {tiles.map((tile) => {
-          const { x, y } = calculateHexPosition(tile.position, size);
-          const isSelected =
-            selectedTile?.position.q === tile.position.q &&
-            selectedTile?.position.r === tile.position.r;
-
-          const isHighlighted = highlightedTiles.some(
-            (pos) => pos.q === tile.position.q && pos.r === tile.position.r
-          );
-
-          // Add player/ai side visualization
-          const sideClass =
-            tile.position.q < 0
-              ? "player-side"
-              : tile.position.q > 0
-              ? "ai-side"
-              : "neutral";
-
-          return (
-            <g
-              key={`${tile.position.q},${tile.position.r}`}
-              transform={`translate(${x}, ${y})`}
-              onClick={() => onTileClick(tile)}
-              className={`cursor-pointer transition-all duration-200 hover:brightness-110 ${sideClass}`}
-              data-position={`${tile.position.q},${tile.position.r}`}
+        <svg
+          width="100%"
+          height="100%"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMid meet"
+          style={{ transform }}
+          className="transition-transform duration-100"
+        >
+          <defs>
+            {/* Define additional effects like drop shadows */}
+            <filter
+              id="drop-shadow"
+              x="-20%"
+              y="-20%"
+              width="140%"
+              height="140%"
             >
-              {/* Hexagon shape */}
-              <polygon
-                points={getHexPoints(size)}
-                className={`${
-                  isSelected
-                    ? "stroke-yellow-400 stroke-[3px]"
-                    : isHighlighted
-                    ? "stroke-green-400 stroke-[2px]"
-                    : "stroke-gray-700 stroke-[1px]"
-                }`}
-                fill={`url(#${tile.terrain.type}-pattern)`}
+              <feDropShadow
+                dx="0"
+                dy="4"
+                stdDeviation="4"
+                floodColor="#000"
+                floodOpacity="0.3"
               />
+            </filter>
 
-              {/* Coordinates display for debugging */}
+            {/* Glow filter for the dividing line */}
+            <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="8" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+
+            {/* 3D effect for hexagons */}
+            <linearGradient id="hex-top" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+            </linearGradient>
+
+            {/* Define patterns for terrain types */}
+            <pattern
+              id="plains-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/plains.png"
+                width="1000"
+                height="1000"
+              />
+            </pattern>
+
+            <pattern
+              id="forest-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/forest.png"
+                width="1000"
+                height="1000"
+              />
+            </pattern>
+
+            <pattern
+              id="mountain-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/mountain.png"
+                width="200"
+                height="200"
+              />
+            </pattern>
+
+            <pattern
+              id="water-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/water.png"
+                width="300"
+                height="300"
+              />
+            </pattern>
+
+            <pattern
+              id="desert-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/desert.png"
+                width="100"
+                height="100"
+              />
+            </pattern>
+
+            <pattern
+              id="swamp-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/swamp.png"
+                width="150"
+                height="150"
+              />
+            </pattern>
+
+            <pattern
+              id="healing-pattern"
+              patternUnits="userSpaceOnUse"
+              width="100"
+              height="100"
+            >
+              <image
+                href="/assets/terrains/healing.png"
+                width="100"
+                height="100"
+              />
+            </pattern>
+          </defs>
+
+          {/* Dividing Line between player and AI sides */}
+          {showDividingLine && (
+            <line
+              x1="0"
+              y1={gridBoundaries.minY}
+              x2="0"
+              y2={gridBoundaries.maxY}
+              stroke="rgba(255, 215, 0, 0.7)"
+              strokeWidth="3"
+              strokeDasharray="10,5"
+              filter="url(#glow)"
+              className="animate-pulse"
+            />
+          )}
+
+          {/* Territory Indicators */}
+          {showDividingLine && (
+            <>
+              {/* Player territory label */}
               <text
-                fontSize={size / 5}
-                fill="white"
+                x={-100}
+                y={gridBoundaries.minY + 50}
+                fontSize="24"
+                fill="#3b82f6"
+                fontWeight="bold"
                 textAnchor="middle"
-                dy="-0.8em"
-                className="pointer-events-none"
-                style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+                filter="url(#drop-shadow)"
               >
-                {`${tile.position.q},${tile.position.r}`}
+                YOUR TERRITORY
               </text>
 
-              {/* Render fortress if present */}
-              {tile.fortress && renderFortress(tile.fortress, size)}
+              {/* AI territory label */}
+              <text
+                x={100}
+                y={gridBoundaries.minY + 50}
+                fontSize="24"
+                fill="#ef4444"
+                fontWeight="bold"
+                textAnchor="middle"
+                filter="url(#drop-shadow)"
+              >
+                ENEMY TERRITORY
+              </text>
+            </>
+          )}
 
-              {/* Render unit if present */}
-              {tile.unit && renderUnit(tile.unit, size)}
-            </g>
-          );
-        })}
-      </svg>
+          {/* Render all tiles */}
+          {tiles.map((tile) => {
+            const { x, y } = calculateHexPosition(tile.position, size);
+            const isSelected =
+              selectedTile?.position.q === tile.position.q &&
+              selectedTile?.position.r === tile.position.r;
+
+            const isHighlighted = highlightedTiles.some(
+              (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+            );
+
+            const isPlacementTile = placementPositions.some(
+              (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+            );
+
+            // Add player/ai side visualization with colored borders
+            const sideClass =
+              tile.position.q < 0
+                ? "player-side"
+                : tile.position.q > 0
+                ? "ai-side"
+                : "neutral";
+
+            // Set border color based on side
+            const borderColor =
+              tile.position.q < 0
+                ? "rgba(59, 130, 246, 0.4)" // player blue
+                : tile.position.q > 0
+                ? "rgba(239, 68, 68, 0.4)" // enemy red
+                : "rgba(107, 114, 128, 0.4)"; // neutral gray
+
+            // Calculate hex sides for 3D effect
+            const points = getHexPoints(size);
+            const height = size * 0.15; // Side height for 3D effect
+
+            return (
+              <g
+                key={`${tile.position.q},${tile.position.r}`}
+                transform={`translate(${x}, ${y})`}
+                onClick={() => onTileClick(tile)}
+                className={`cursor-pointer transition-all duration-200 hover:brightness-110 ${sideClass}`}
+                data-position={`${tile.position.q},${tile.position.r}`}
+              >
+                {/* 3D Hex Bottom (shadow) */}
+                <polygon
+                  points={points}
+                  fill="#000"
+                  fillOpacity="0.3"
+                  transform={`translate(${size * 0.05}, ${size * 0.05})`}
+                />
+
+                {/* Territory indicator (subtle colored border) */}
+                <polygon
+                  points={points}
+                  fill="none"
+                  stroke={borderColor}
+                  strokeWidth="4"
+                  strokeOpacity="0.7"
+                />
+
+                {/* 3D Hex Sides */}
+                {[0, 1, 2, 3, 4, 5].map((i) => {
+                  const angle1 = (Math.PI / 180) * (60 * i);
+                  const angle2 = (Math.PI / 180) * (60 * (i + 1));
+                  const x1 = size * Math.cos(angle1);
+                  const y1 = size * Math.sin(angle1);
+                  const x2 = size * Math.cos(angle2);
+                  const y2 = size * Math.sin(angle2);
+
+                  // Only render sides that are facing "down" (bottom half of hex)
+                  if (y1 >= 0 || y2 >= 0) {
+                    return (
+                      <polygon
+                        key={i}
+                        points={`${x1},${y1} ${x2},${y2} ${x2},${
+                          y2 + height
+                        } ${x1},${y1 + height}`}
+                        fill={`url(#${tile.terrain.type}-pattern)`}
+                        opacity="0.7"
+                      />
+                    );
+                  }
+                  return null;
+                })}
+
+                {/* Main Hex Top */}
+                <polygon
+                  points={points}
+                  className={`${
+                    isSelected
+                      ? "stroke-yellow-400 stroke-[3px]"
+                      : isHighlighted
+                      ? "stroke-green-400 stroke-[2px]"
+                      : isPlacementTile
+                      ? "stroke-blue-400 stroke-[2px] stroke-dasharray-2"
+                      : "stroke-gray-700 stroke-[1px]"
+                  }`}
+                  fill={`url(#${tile.terrain.type}-pattern)`}
+                  filter="url(#drop-shadow)"
+                />
+
+                {/* Hex Top Highlight */}
+                <polygon
+                  points={points}
+                  fill="url(#hex-top)"
+                  className="pointer-events-none"
+                />
+
+                {/* Render fortress if present */}
+                {tile.fortress && renderFortress(tile.fortress, size)}
+
+                {/* Render unit if present */}
+                {tile.unit &&
+                  renderUnit(
+                    tile.unit,
+                    size,
+                    unitStates[tile.unit.instanceId] || "idle",
+                    () => simulateUnitAction(tile.unit!.instanceId, "attack")
+                  )}
+
+                {/* Placement indicator when a card is selected */}
+                {isPlacementTile && (
+                  <circle
+                    r={size * 0.7}
+                    fill="rgba(0, 100, 255, 0.2)"
+                    stroke="rgba(0, 100, 255, 0.5)"
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    className="animate-pulse"
+                  />
+                )}
+
+                {/* Coordinates display for debugging */}
+                {/* <text
+                  fontSize={size / 5}
+                  fill="white"
+                  textAnchor="middle"
+                  dy="-0.8em"
+                  className="pointer-events-none"
+                  style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+                >
+                  {`${tile.position.q},${tile.position.r}`}
+                </text> */}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
     </div>
   );
 };
 
-// Render fortress
+// Render fortress with 3D effect
 const renderFortress = (fortress: any, size: number) => {
   const fortressColor =
     fortress.owner === "player" ? "rgba(0,100,255,0.8)" : "rgba(255,50,50,0.8)";
   const healthPercentage = (fortress.health / fortress.maxHealth) * 100;
 
   return (
-    <g className="fortress">
+    <g className="fortress" filter="url(#drop-shadow)">
       {/* Fortress Base */}
       <polygon
         points={`0,${-size / 3} ${size / 2},0 0,${size / 3} ${-size / 2},0`}
@@ -252,41 +615,76 @@ const renderFortress = (fortress: any, size: number) => {
         strokeWidth="1"
       />
 
-      {/* Fortress Health Bar */}
+      {/* Fortress 3D Details */}
+      <rect
+        x={-size / 6}
+        y={-size / 2}
+        width={size / 3}
+        height={size / 12}
+        fill="rgba(255,255,255,0.3)"
+      />
+
+      <polygon
+        points={`0,${-size / 3} ${size / 2},0 ${size / 2},${size / 10} 0,${
+          -size / 3 + size / 10
+        }`}
+        fill="rgba(255,255,255,0.2)"
+      />
+
+      <polygon
+        points={`0,${-size / 3} ${-size / 2},0 ${-size / 2},${size / 10} 0,${
+          -size / 3 + size / 10
+        }`}
+        fill="rgba(0,0,0,0.2)"
+      />
+
+      {/* Improved Fortress Health Bar with Background */}
       <rect
         x={-size / 2}
         y={size / 3 + 4}
         width={size}
-        height={6}
-        rx={3}
-        fill="rgba(0,0,0,0.7)"
+        height={10}
+        rx={5}
+        fill="rgba(0,0,0,0.8)"
+        stroke="#333"
+        strokeWidth="1"
       />
       <rect
         x={-size / 2}
         y={size / 3 + 4}
         width={(size * healthPercentage) / 100}
-        height={6}
-        rx={3}
+        height={10}
+        rx={5}
         fill={
           healthPercentage > 60
-            ? "rgba(0,255,0,0.8)"
+            ? "rgba(16,185,129,0.9)" // Green
             : healthPercentage > 30
-            ? "rgba(255,255,0,0.8)"
-            : "rgba(255,0,0,0.8)"
+            ? "rgba(245,158,11,0.9)" // Yellow
+            : "rgba(239,68,68,0.9)" // Red
         }
+      />
+
+      {/* Owner badge */}
+      <circle
+        cx={-size / 2 - 10}
+        cy={-size / 3 - 10}
+        r={size / 10}
+        fill={fortress.owner === "player" ? "#3b82f6" : "#ef4444"}
+        stroke="white"
+        strokeWidth="1"
       />
 
       {/* Health Text */}
       <text
         x={0}
-        y={size / 3 + 7}
+        y={size / 3 + 9}
         textAnchor="middle"
         dominantBaseline="middle"
-        fontSize={size / 6}
+        fontSize={size / 5}
         fill="white"
         fontWeight="bold"
         className="pointer-events-none"
-        style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+        style={{ textShadow: "1px 1px 2px rgba(0,0,0,1)" }}
       >
         {fortress.health}
       </text>
@@ -294,173 +692,183 @@ const renderFortress = (fortress: any, size: number) => {
   );
 };
 
-// Render unit
-const renderUnit = (unit: any, size: number) => {
-  const healthPercentage = (unit.health / unit.maxHealth) * 100;
+// Render unit with animations
+const renderUnit = (
+  unit: any,
+  size: number,
+  state: "idle" | "attack" | "walk",
+  onAttack: () => void
+) => {
   const unitSize = size * 0.7;
+  const healthPercentage = (unit.health / unit.maxHealth) * 100;
+
+  // Mapping unit type to asset paths
+  const getUnitAssets = (type: string) => {
+    // In a full implementation, this would return different assets for each unit type
+    return {
+      idle: "/assets/units/warrior_1_idle.gif",
+      attack: "/assets/units/warrior_1_attack.gif",
+      walk: "/assets/units/warrior_1_walk.gif",
+      card: "/assets/cards/warrior_1.png",
+    };
+  };
+
+  const assets = getUnitAssets(unit.type);
 
   return (
-    <g className="unit">
-      {/* Unit Circle */}
+    <g
+      className="unit"
+      onClick={(e) => {
+        e.stopPropagation();
+        onAttack();
+      }}
+    >
+      {/* Unit Base Circle with team color ring */}
       <circle
-        r={unitSize / 2}
-        fill="rgba(0,0,0,0.5)"
-        className="stroke-2"
-        stroke={unit.canAct ? "white" : "gray"}
+        r={unitSize / 1.6}
+        cy={unitSize / 10}
+        fill={
+          unit.owner === "player"
+            ? "rgba(59,130,246,0.2)"
+            : "rgba(239,68,68,0.2)"
+        }
+        stroke={
+          unit.owner === "player"
+            ? "rgba(59,130,246,0.5)"
+            : "rgba(239,68,68,0.5)"
+        }
+        strokeWidth="2"
+        filter="url(#drop-shadow)"
       />
 
-      {/* Unit Icon (based on type) */}
-      <circle r={unitSize / 2 - 2} fill={getUnitColor(unit.type)} />
+      <circle
+        r={unitSize / 1.8}
+        cy={unitSize / 10} // Offset slightly to give a "standing on ground" look
+        fill="rgba(0,0,0,0.3)"
+        filter="url(#drop-shadow)"
+      />
 
-      {/* Unit Type Icon */}
-      {renderUnitTypeIcon(unit.type, unitSize / 2 - 4)}
-
-      {/* Health Bar */}
-      <rect
+      {/* Unit Character Image */}
+      <foreignObject
         x={-unitSize / 2}
-        y={unitSize / 2 - 3}
+        y={-unitSize / 1.5}
         width={unitSize}
-        height={4}
-        rx={2}
-        fill="rgba(0,0,0,0.7)"
+        height={unitSize * 1.5}
+        className="pointer-events-none overflow-visible"
+      >
+        <div className="w-full h-full overflow-visible">
+          <img
+            src={assets[state]}
+            alt={unit.name}
+            className="w-full h-full scale-130"
+          />
+        </div>
+      </foreignObject>
+
+      {/* Improved Health Bar with Background */}
+      <rect
+        x={-unitSize / 2}
+        y={unitSize / 3}
+        width={unitSize}
+        height={6}
+        rx={3}
+        fill="rgba(0,0,0,0.8)"
+        stroke="#333"
+        strokeWidth="1"
       />
       <rect
         x={-unitSize / 2}
-        y={unitSize / 2 - 3}
+        y={unitSize / 3}
         width={(unitSize * healthPercentage) / 100}
-        height={4}
-        rx={2}
+        height={6}
+        rx={3}
         fill={
           healthPercentage > 60
-            ? "rgba(0,255,0,0.8)"
+            ? "rgba(16,185,129,0.9)" // Green
             : healthPercentage > 30
-            ? "rgba(255,255,0,0.8)"
-            : "rgba(255,0,0,0.8)"
+            ? "rgba(245,158,11,0.9)" // Yellow
+            : "rgba(239,68,68,0.9)" // Red
         }
       />
 
+      {/* Unit Stats Display - Better Positioned */}
       {/* Attack Value */}
-      <circle
-        cx={-unitSize / 2 + 5}
-        cy={-unitSize / 2 + 5}
-        r={unitSize / 6}
-        fill="rgba(255,0,0,0.8)"
-      />
-      <text
-        x={-unitSize / 2 + 5}
-        y={-unitSize / 2 + 5}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize={unitSize / 7}
-        fill="white"
-        fontWeight="bold"
-        className="pointer-events-none"
+      <g
+        transform={`translate(${-unitSize / 2 + 12}, ${-unitSize / 2 + 12})`}
+        filter="url(#drop-shadow)"
       >
-        {unit.attack}
-      </text>
+        <circle
+          r={unitSize / 6}
+          fill="rgba(220,38,38,0.9)"
+          stroke="white"
+          strokeWidth="1"
+        />
+        <text
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={unitSize / 6}
+          fill="white"
+          fontWeight="bold"
+          className="pointer-events-none"
+          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+        >
+          {unit.attack}
+        </text>
+      </g>
 
       {/* Range Indicator */}
-      <circle
-        cx={unitSize / 2 - 5}
-        cy={-unitSize / 2 + 5}
-        r={unitSize / 6}
-        fill="rgba(0,0,255,0.8)"
-      />
-      <text
-        x={unitSize / 2 - 5}
-        y={-unitSize / 2 + 5}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize={unitSize / 7}
-        fill="white"
-        fontWeight="bold"
-        className="pointer-events-none"
+      <g
+        transform={`translate(${unitSize / 2 - 12}, ${-unitSize / 2 + 12})`}
+        filter="url(#drop-shadow)"
       >
-        {unit.range}
-      </text>
+        <circle
+          r={unitSize / 6}
+          fill="rgba(37,99,235,0.9)"
+          stroke="white"
+          strokeWidth="1"
+        />
+        <text
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fontSize={unitSize / 6}
+          fill="white"
+          fontWeight="bold"
+          className="pointer-events-none"
+          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+        >
+          {unit.range}
+        </text>
+      </g>
+
+      {/* Status Indicators (moved/attacked) */}
+      <g transform="translate(0, 0)" pointerEvents="none">
+        {unit.hasMoved && (
+          <circle
+            cx={-unitSize / 4}
+            cy={-unitSize / 4}
+            r={unitSize / 10}
+            fill="rgba(0,0,0,0.5)"
+            stroke="white"
+            strokeWidth="1"
+          >
+            <title>Unit has moved</title>
+          </circle>
+        )}
+        {unit.hasAttacked && (
+          <circle
+            cx={unitSize / 4}
+            cy={-unitSize / 4}
+            r={unitSize / 10}
+            fill="rgba(0,0,0,0.5)"
+            stroke="white"
+            strokeWidth="1"
+          >
+            <title>Unit has attacked</title>
+          </circle>
+        )}
+      </g>
     </g>
   );
-};
-
-// Render unit type icon
-const renderUnitTypeIcon = (type: string, size: number) => {
-  switch (type) {
-    case "warrior":
-      return (
-        <path
-          d="M0,-5 L5,5 L-5,5 Z"
-          fill="white"
-          transform={`scale(${size / 10})`}
-        />
-      );
-    case "archer":
-      return (
-        <circle
-          r={size / 2}
-          fill="none"
-          stroke="white"
-          strokeWidth={size / 5}
-        />
-      );
-    case "healer":
-      return (
-        <path
-          d="M-5,0 L5,0 M0,-5 L0,5"
-          stroke="white"
-          strokeWidth={size / 5}
-          strokeLinecap="round"
-          transform={`scale(${size / 10})`}
-        />
-      );
-    case "tank":
-      return (
-        <rect
-          x={-size / 2}
-          y={-size / 2}
-          width={size}
-          height={size}
-          fill="none"
-          stroke="white"
-          strokeWidth={size / 5}
-        />
-      );
-    case "mage":
-      return (
-        <path
-          d="M-5,-5 L5,5 M-5,5 L5,-5"
-          stroke="white"
-          strokeWidth={size / 5}
-          strokeLinecap="round"
-          transform={`scale(${size / 10})`}
-        />
-      );
-    case "scout":
-      return (
-        <path
-          d="M0,0 L0,-7 M-5,0 L5,0"
-          stroke="white"
-          strokeWidth={size / 5}
-          strokeLinecap="round"
-          transform={`scale(${size / 10})`}
-        />
-      );
-    default:
-      return null;
-  }
-};
-
-// Get unit color based on type
-const getUnitColor = (type: string): string => {
-  const unitColors: Record<string, string> = {
-    warrior: "#d00000",
-    archer: "#6a994e",
-    healer: "#7209b7",
-    tank: "#1d3557",
-    mage: "#7209b7",
-    scout: "#f9c74f",
-  };
-
-  return unitColors[type] || "#cccccc";
 };
 
 export default HexGrid;
