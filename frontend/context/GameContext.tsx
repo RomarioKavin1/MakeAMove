@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { Card, CardInstance } from "@/types/Card";
+import { Card, CardInstance, CardType } from "@/types/Card";
 import {
   initializeGame,
   createCardInstances,
@@ -25,8 +25,12 @@ import {
 } from "@/lib/hexUtils";
 import { sampleCards } from "@/lib/cardUtils";
 import { runMockAI } from "@/lib/mockAI";
-import { GameState, Position } from "@/types/Game";
+import { GameState, Position, UnitAnimation } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
+
+// Define animation types
+export type AnimationState = "idle" | "attack" | "walk";
+export type AnimationDirection = "left" | "right";
 
 // Define the context state
 interface GameContextState {
@@ -45,13 +49,7 @@ interface GameContextState {
   highlightedTiles: Position[];
   placedFortresses: number;
   aiMessage: string;
-  unitAnimations: Record<
-    string,
-    {
-      state: "idle" | "attack" | "walk";
-      target?: Position;
-    }
-  >;
+  unitAnimations: Record<string, UnitAnimation>;
 }
 
 // Define actions
@@ -75,7 +73,7 @@ type GameAction =
       type: "UNIT_ANIMATION_START";
       payload: {
         unitId: string;
-        state: "idle" | "attack" | "walk";
+        state: AnimationState;
         target?: Position;
       };
     }
@@ -130,9 +128,9 @@ const gameReducer = (
       // Get sample cards for player deck
       const playerDeck = sampleCards(8);
 
-      // Create card instances for player and AI
-      const playerHand = createCardInstances(playerDeck.slice(0, 5));
-      const aiHand = createCardInstances(sampleCards(5));
+      // Create card instances for player and AI with owner property
+      const playerHand = createCardInstances(playerDeck.slice(0, 5), "player");
+      const aiHand = createCardInstances(sampleCards(5), "ai");
 
       // Initialize game state
       const gameState = initializeGame(playerDeck, gridSize, tiles);
@@ -293,12 +291,14 @@ const gameReducer = (
         return state;
       }
 
+      // Make sure the card has an owner property
+      const cardWithOwner = {
+        ...state.selectedCard,
+        owner: "player" as const,
+      };
+
       // Place the unit
-      const { tiles, unit } = placeUnit(
-        state.tiles,
-        state.selectedCard,
-        position
-      );
+      const { tiles, unit } = placeUnit(state.tiles, cardWithOwner, position);
 
       // Remove the card from hand
       const updatedHand = state.playerHand.filter(
@@ -338,6 +338,7 @@ const gameReducer = (
       );
 
       if (!isValidMove) {
+        console.log("Invalid move - not in possible moves list");
         return state;
       }
 
@@ -377,52 +378,76 @@ const gameReducer = (
     }
 
     case "ATTACK": {
-      // Need a selected tile with a unit that can attack
-      if (
-        !state.selectedTile ||
-        !state.selectedTile.unit ||
-        state.selectedTile.unit.hasAttacked ||
-        !state.possibleAttacks.length
-      ) {
-        return state;
-      }
-
       const targetPosition = action.payload;
 
-      // Check if the target position is in the possible attacks list
-      const isValidAttack = state.possibleAttacks.some(
-        (pos) => pos.q === targetPosition.q && pos.r === targetPosition.r
-      );
-
-      if (!isValidAttack) {
+      if (!state.selectedTile || !state.selectedTile.unit) {
         return state;
       }
 
-      // Perform the attack
-      const { tiles, attacker, damageDealt } = performAttack(
-        state.tiles,
-        state.selectedTile.unit,
-        targetPosition
+      // Get the current unit
+      const unit = state.selectedTile.unit;
+
+      // Make sure the unit hasn't already attacked
+      if (unit.hasAttacked) {
+        console.log("Unit has already attacked this turn");
+        return state;
+      }
+
+      // Get the target tile
+      const targetTile = state.tiles.find(
+        (tile) =>
+          tile.position.q === targetPosition.q &&
+          tile.position.r === targetPosition.r
       );
 
-      // Find the updated tile with the attacking unit
-      const newSelectedTile = tiles.find(
-        (tile) => tile.unit && tile.unit.instanceId === attacker.instanceId
-      );
+      if (!targetTile) {
+        console.log("Invalid target position");
+        return state;
+      }
 
-      // Update placed units list
+      // Prevent attacking friendly units or fortresses
+      if (
+        (targetTile.unit && targetTile.unit.owner === unit.owner) ||
+        (targetTile.fortress && targetTile.fortress.owner === unit.owner)
+      ) {
+        console.log("Cannot attack friendly units or fortresses");
+        return state;
+      }
+
+      // Perform the attack with the game logic function
+      const {
+        tiles: updatedTiles,
+        attacker: updatedUnit,
+        damageDealt,
+      } = performAttack(state.tiles, unit, targetPosition);
+
+      // Set an AI message about the attack for feedback
+      let aiMessage = "";
+      if (damageDealt > 0) {
+        if (targetTile.unit) {
+          aiMessage = `${unit.name} attacks for ${damageDealt} damage!`;
+        } else if (targetTile.fortress) {
+          aiMessage = `${unit.name} attacks the fortress for ${damageDealt} damage!`;
+        }
+      }
+
+      // Update the placedUnits list
       const updatedPlacedUnits = state.placedUnits.map((placedUnit) =>
-        placedUnit.instanceId === attacker.instanceId ? attacker : placedUnit
+        placedUnit.instanceId === updatedUnit.instanceId
+          ? updatedUnit
+          : placedUnit
       );
 
+      // Clear possible attacks since the unit attacked
       return {
         ...state,
-        tiles,
+        tiles: updatedTiles,
         placedUnits: updatedPlacedUnits,
-        selectedTile: newSelectedTile || null,
+        selectedTile: null,
         possibleMoves: [],
         possibleAttacks: [],
         highlightedTiles: [],
+        aiMessage,
       };
     }
 
@@ -503,27 +528,43 @@ const gameReducer = (
     }
 
     case "UNIT_ANIMATION_START": {
+      const { unitId, state: animationState, target } = action.payload;
+
+      // Find the unit's current position to determine direction
+      const unitTile = state.tiles.find(
+        (tile) => tile.unit?.instanceId === unitId
+      );
+      const unitPosition = unitTile?.position;
+
+      // Determine direction based on target position
+      let direction: AnimationDirection = "right";
+      if (unitPosition && target) {
+        direction = target.q > unitPosition.q ? "right" : "left";
+      }
+
       return {
         ...state,
         unitAnimations: {
           ...state.unitAnimations,
-          [action.payload.unitId]: {
-            state: action.payload.state,
-            target: action.payload.target,
+          [unitId]: {
+            state: animationState,
+            target,
+            direction,
           },
         },
       };
     }
 
     case "UNIT_ANIMATION_END": {
-      const { [action.payload.unitId]: _, ...restAnimations } =
-        state.unitAnimations;
+      const { unitId } = action.payload;
+
+      // Create a new animations object without the finished animation
+      const updatedAnimations = { ...state.unitAnimations };
+      delete updatedAnimations[unitId];
+
       return {
         ...state,
-        unitAnimations: {
-          ...restAnimations,
-          [action.payload.unitId]: { state: "idle" },
-        },
+        unitAnimations: updatedAnimations,
       };
     }
 

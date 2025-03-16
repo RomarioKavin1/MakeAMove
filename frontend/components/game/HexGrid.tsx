@@ -2,17 +2,19 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { calculateHexPosition, getPlacementPositions } from "@/lib/hexUtils";
 import styles from "./HexGrid.module.css";
-import { Position } from "@/types/Game";
+import { Position, UnitAnimation } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
+import { CardInstance, CardType } from "@/types/Card";
 
 interface HexGridProps {
   tiles: HexTile[];
   onTileClick: (tile: HexTile) => void;
-  selectedTile?: HexTile;
+  selectedTile?: HexTile | null;
   highlightedTiles?: Position[];
-  selectedCard?: any; // To know if we're placing a unit
+  selectedCard?: CardInstance | null;
   size: number;
-  showDividingLine?: boolean; // New prop for the dividing line
+  showDividingLine?: boolean;
+  unitAnimations?: Record<string, UnitAnimation>;
 }
 
 const HexGrid: React.FC<HexGridProps> = ({
@@ -23,6 +25,7 @@ const HexGrid: React.FC<HexGridProps> = ({
   selectedCard,
   size,
   showDividingLine = false,
+  unitAnimations = {},
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewBox, setViewBox] = useState("-500 -400 1000 800");
@@ -196,7 +199,7 @@ const HexGrid: React.FC<HexGridProps> = ({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -219,7 +222,7 @@ const HexGrid: React.FC<HexGridProps> = ({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -237,7 +240,7 @@ const HexGrid: React.FC<HexGridProps> = ({
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
@@ -398,7 +401,7 @@ const HexGrid: React.FC<HexGridProps> = ({
               x2="0"
               y2={gridBoundaries.maxY}
               stroke="rgba(255, 215, 0, 0.7)"
-              strokeWidth="3"
+              strokeWidth="1"
               strokeDasharray="10,5"
               filter="url(#glow)"
               className="animate-pulse"
@@ -487,15 +490,6 @@ const HexGrid: React.FC<HexGridProps> = ({
                   transform={`translate(${size * 0.05}, ${size * 0.05})`}
                 />
 
-                {/* Territory indicator (improved borders) */}
-                <polygon
-                  points={points}
-                  fill="none"
-                  stroke={borderColor}
-                  strokeWidth="5" // Increased from 4
-                  strokeOpacity="0.9" // Increased from 0.7 for better visibility
-                />
-
                 {/* 3D Hex Sides */}
                 {[0, 1, 2, 3, 4, 5].map((i) => {
                   const angle1 = (Math.PI / 180) * (60 * i);
@@ -524,15 +518,6 @@ const HexGrid: React.FC<HexGridProps> = ({
                 {/* Main Hex Top */}
                 <polygon
                   points={points}
-                  className={`${
-                    isSelected
-                      ? "stroke-yellow-400 stroke-[4px]" // Increased from 3px
-                      : isHighlighted
-                      ? "stroke-green-400 stroke-[3px]" // Increased from 2px
-                      : isPlacementTile
-                      ? "stroke-blue-400 stroke-[3px] stroke-dasharray-4" // Increased from 2px
-                      : "stroke-gray-800 stroke-[2px]" // Increased from 1px
-                  }`}
                   fill={`url(#${tile.terrain.type}-pattern)`}
                   filter="url(#drop-shadow)"
                 />
@@ -544,6 +529,32 @@ const HexGrid: React.FC<HexGridProps> = ({
                   className="pointer-events-none"
                 />
 
+                {/* Selection/Highlight Border - Moved to appear on top of everything */}
+                <polygon
+                  points={points}
+                  fill="none"
+                  className={`${
+                    isSelected
+                      ? "stroke-yellow-400 stroke-[2px]"
+                      : isHighlighted
+                      ? "stroke-green-400 stroke-[2px]"
+                      : isPlacementTile
+                      ? "stroke-blue-400 stroke-[2px] stroke-dasharray-4"
+                      : "stroke-gray-800 stroke-[1px]"
+                  }`}
+                  pointerEvents="none"
+                />
+
+                {/* Territory indicator (improved borders) - Must be last to appear above all */}
+                <polygon
+                  points={points}
+                  fill="none"
+                  stroke={borderColor}
+                  strokeWidth="2"
+                  strokeOpacity="0.9"
+                  pointerEvents="none"
+                />
+
                 {/* Render fortress if present */}
                 {tile.fortress && renderFortress(tile.fortress, size)}
 
@@ -553,7 +564,8 @@ const HexGrid: React.FC<HexGridProps> = ({
                     tile.unit,
                     size,
                     unitStates[tile.unit.instanceId] || "idle",
-                    () => simulateUnitAction(tile.unit!.instanceId, "attack")
+                    () => simulateUnitAction(tile.unit!.instanceId, "attack"),
+                    unitAnimations
                   )}
 
                 {/* Placement indicator when a card is selected */}
@@ -567,18 +579,6 @@ const HexGrid: React.FC<HexGridProps> = ({
                     className="animate-pulse"
                   />
                 )}
-
-                {/* Coordinates display for debugging */}
-                {/* <text
-                  fontSize={size / 5}
-                  fill="white"
-                  textAnchor="middle"
-                  dy="-0.8em"
-                  className="pointer-events-none"
-                  style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
-                >
-                  {`${tile.position.q},${tile.position.r}`}
-                </text> */}
               </g>
             );
           })}
@@ -692,24 +692,36 @@ const renderFortress = (fortress: any, size: number) => {
   );
 };
 
-// Render unit with animations
+// Render unit with animations and direction support
 const renderUnit = (
-  unit: any,
+  unit: CardInstance,
   size: number,
-  state: "idle" | "attack" | "walk",
-  onAttack: () => void
+  defaultState: "idle" | "attack" | "walk",
+  onAttack: () => void,
+  unitAnimations?: Record<string, UnitAnimation>
 ) => {
   const unitSize = size * 0.7;
   const healthPercentage = (unit.health / unit.maxHealth) * 100;
 
+  // Get animation state from unitAnimations if available
+  const animation = unitAnimations?.[unit.instanceId];
+  const animationState: "idle" | "attack" | "walk" =
+    animation?.state || defaultState;
+
+  // Determine direction - default to right, but check animations
+  const direction = animation?.direction || "right";
+  const facingLeft = direction === "left";
+
   // Mapping unit type to asset paths
-  const getUnitAssets = (type: string) => {
-    // In a full implementation, this would return different assets for each unit type
+  const getUnitAssets = (type: CardType) => {
+    // Base assets path - in a real implementation, this would be different for each unit type
+    // const basePath = `/assets/units/${type}_`;
+    const basePath = `/assets/units/warrior_1_`;
+
     return {
-      idle: "/assets/units/warrior_1_idle.gif",
-      attack: "/assets/units/warrior_1_attack.gif",
-      walk: "/assets/units/warrior_1_walk.gif",
-      card: "/assets/cards/warrior_1.png",
+      idle: `${basePath}idle.gif`,
+      attack: `${basePath}attack.gif`,
+      walk: `${basePath}walking.gif`,
     };
   };
 
@@ -737,18 +749,18 @@ const renderUnit = (
             ? "rgba(59,130,246,0.5)"
             : "rgba(239,68,68,0.5)"
         }
-        strokeWidth="3" // Increased from 2 for better visibility
+        strokeWidth="3"
         filter="url(#drop-shadow)"
       />
 
       <circle
         r={unitSize / 1.8}
-        cy={unitSize / 10} // Offset slightly to give a "standing on ground" look
+        cy={unitSize / 10}
         fill="rgba(0,0,0,0.3)"
         filter="url(#drop-shadow)"
       />
 
-      {/* Unit Character Image */}
+      {/* Unit Character Image with direction support */}
       <foreignObject
         x={-unitSize / 2}
         y={-unitSize / 1.5}
@@ -758,9 +770,14 @@ const renderUnit = (
       >
         <div className="w-full h-full overflow-visible">
           <img
-            src={assets[state]}
+            src={assets[animationState]}
             alt={unit.name}
-            className="w-full h-full scale-130"
+            style={{
+              width: "100%",
+              height: "100%",
+              transform: facingLeft ? "scaleX(-1)" : "none",
+              transformOrigin: "center",
+            }}
           />
         </div>
       </foreignObject>
@@ -770,8 +787,8 @@ const renderUnit = (
         x={-unitSize / 2}
         y={unitSize / 3}
         width={unitSize}
-        height={10} // Increased from 6 to match fortress
-        rx={5} // Increased from 3 to match fortress
+        height={10}
+        rx={5}
         fill="rgba(0,0,0,0.8)"
         stroke="#333"
         strokeWidth="1"
@@ -794,7 +811,7 @@ const renderUnit = (
       {/* Add health text to match fortress */}
       <text
         x={0}
-        y={unitSize / 3 + 5} // Center in the health bar
+        y={unitSize / 3 + 5}
         textAnchor="middle"
         dominantBaseline="middle"
         fontSize={unitSize / 6}
@@ -813,19 +830,19 @@ const renderUnit = (
         filter="url(#drop-shadow)"
       >
         <circle
-          r={unitSize / 5} // Increased from 1/6
+          r={unitSize / 5}
           fill="rgba(220,38,38,0.9)"
           stroke="white"
-          strokeWidth="2" // Increased from 1
+          strokeWidth="2"
         />
         <text
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={unitSize / 5} // Increased from 1/6
+          fontSize={unitSize / 5}
           fill="white"
           fontWeight="bold"
           className="pointer-events-none"
-          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }} // Enhanced shadow
+          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
         >
           {unit.attack}
         </text>
@@ -837,19 +854,19 @@ const renderUnit = (
         filter="url(#drop-shadow)"
       >
         <circle
-          r={unitSize / 5} // Increased from 1/6
+          r={unitSize / 5}
           fill="rgba(37,99,235,0.9)"
           stroke="white"
-          strokeWidth="2" // Increased from 1
+          strokeWidth="2"
         />
         <text
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={unitSize / 5} // Increased from 1/6
+          fontSize={unitSize / 5}
           fill="white"
           fontWeight="bold"
           className="pointer-events-none"
-          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }} // Enhanced shadow
+          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}
         >
           {unit.range}
         </text>
@@ -861,10 +878,10 @@ const renderUnit = (
           <circle
             cx={-unitSize / 4}
             cy={-unitSize / 4}
-            r={unitSize / 9} // Increased from 1/10
-            fill="rgba(75,85,99,0.8)" // Changed from black to dark gray
+            r={unitSize / 9}
+            fill="rgba(75,85,99,0.8)"
             stroke="white"
-            strokeWidth="1.5" // Increased from 1
+            strokeWidth="1.5"
           >
             <title>Unit has moved</title>
           </circle>
@@ -873,10 +890,10 @@ const renderUnit = (
           <circle
             cx={unitSize / 4}
             cy={-unitSize / 4}
-            r={unitSize / 9} // Increased from 1/10
-            fill="rgba(75,85,99,0.8)" // Changed from black to dark gray
+            r={unitSize / 9}
+            fill="rgba(75,85,99,0.8)"
             stroke="white"
-            strokeWidth="1.5" // Increased from 1
+            strokeWidth="1.5"
           >
             <title>Unit has attacked</title>
           </circle>

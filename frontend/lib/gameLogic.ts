@@ -23,8 +23,11 @@ export const initializeGame = (
   };
 };
 
-// Create card instances from cards
-export const createCardInstances = (cards: Card[]): CardInstance[] => {
+// Create card instances from cards with owner property
+export const createCardInstances = (
+  cards: Card[],
+  owner: "player" | "ai" = "player"
+): CardInstance[] => {
   return cards.map((card) => ({
     ...card,
     instanceId: Math.random().toString(36).substring(2, 15),
@@ -32,6 +35,7 @@ export const createCardInstances = (cards: Card[]): CardInstance[] => {
     canAct: true,
     hasAttacked: false,
     hasMoved: false,
+    owner, // Add owner property
   }));
 };
 
@@ -92,19 +96,20 @@ export const placeUnit = (
     return { tiles, unit };
   }
 
-  // Update the unit with the new position
-  const updatedUnit: CardInstance = {
+  // Ensure unit has owner property
+  const unitWithOwner = {
     ...unit,
     position,
+    owner: unit.owner || (position.q < 0 ? "player" : "ai"),
   };
 
   // Update the tile
   updatedTiles[tileIndex] = {
     ...updatedTiles[tileIndex],
-    unit: updatedUnit,
+    unit: unitWithOwner,
   };
 
-  return { tiles: updatedTiles, unit: updatedUnit };
+  return { tiles: updatedTiles, unit: unitWithOwner };
 };
 
 // Move a unit from one position to another
@@ -115,6 +120,12 @@ export const moveUnit = (
 ): { tiles: HexTile[]; unit: CardInstance } => {
   if (!unit.position) {
     console.error("Unit has no current position");
+    return { tiles, unit };
+  }
+
+  // Check if unit has already moved
+  if (unit.hasMoved) {
+    console.error("Unit has already moved this turn");
     return { tiles, unit };
   }
 
@@ -187,7 +198,7 @@ export const moveUnit = (
   return { tiles: updatedTiles, unit: updatedUnit };
 };
 
-// Attack logic
+// Attack logic with friendly fire prevention
 export const performAttack = (
   tiles: HexTile[],
   attacker: CardInstance,
@@ -213,6 +224,16 @@ export const performAttack = (
   }
 
   const targetTile = updatedTiles[targetTileIndex];
+
+  // Check if target is friendly (same owner) and abort if so
+  if (
+    (targetTile.unit && targetTile.unit.owner === attacker.owner) ||
+    (targetTile.fortress && targetTile.fortress.owner === attacker.owner)
+  ) {
+    console.error("Cannot attack friendly units or fortresses");
+    return { tiles: updatedTiles, attacker, damageDealt: 0 };
+  }
+
   let damageDealt = 0;
 
   // Calculate base attack damage
@@ -227,7 +248,8 @@ export const performAttack = (
 
   if (attackerTileIndex !== -1) {
     const attackerTile = updatedTiles[attackerTileIndex];
-    attackDamage += attackerTile.terrain.attackBonus;
+    const attackBonus = attackerTile.terrain.attackBonus || 0;
+    attackDamage += attackBonus;
 
     // Check for terrain-specific attack bonuses
     const terrainEffect = attacker.terrainEffects.find(
@@ -251,7 +273,7 @@ export const performAttack = (
     }
 
     // Calculate defense value (including terrain bonus)
-    let defenseValue = targetTile.terrain.defenseBonus;
+    let defenseValue = targetTile.terrain.defenseBonus || 0;
 
     // Check for terrain-specific defense bonuses
     const targetTerrainEffect = targetUnit.terrainEffects.find(
@@ -409,8 +431,7 @@ export const resetUnitsForNewTurn = (
   updatedTiles.forEach((tile, index) => {
     if (tile.unit) {
       // Determine if this unit belongs to the current player
-      // For this simple version, we use position to determine ownership
-      const isPlayerUnit = tile.position.q < 0;
+      const isPlayerUnit = tile.unit.owner === "player";
       const isCurrentPlayerUnit =
         (player === "player" && isPlayerUnit) ||
         (player === "ai" && !isPlayerUnit);

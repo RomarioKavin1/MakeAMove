@@ -159,12 +159,14 @@ const BattlePage: React.FC = () => {
       setTimeout(() => {
         dispatch({ type: "MOVE_UNIT", payload: tile.position });
 
-        // End animation
-        dispatch({
-          type: "UNIT_ANIMATION_END",
-          payload: { unitId: selectedTile.unit!.instanceId },
-        });
-      }, 500); // Animation duration
+        // End animation after the move is complete
+        setTimeout(() => {
+          dispatch({
+            type: "UNIT_ANIMATION_END",
+            payload: { unitId: selectedTile.unit!.instanceId },
+          });
+        }, 300); // Short delay to ensure walking animation is seen
+      }, 400); // Increased from 200ms for better animation timing
 
       return;
     }
@@ -190,11 +192,13 @@ const BattlePage: React.FC = () => {
         dispatch({ type: "ATTACK", payload: tile.position });
 
         // End animation
-        dispatch({
-          type: "UNIT_ANIMATION_END",
-          payload: { unitId: selectedTile.unit!.instanceId },
-        });
-      }, 800); // Animation duration
+        setTimeout(() => {
+          dispatch({
+            type: "UNIT_ANIMATION_END",
+            payload: { unitId: selectedTile.unit!.instanceId },
+          });
+        }, 500); // Animation completion time
+      }, 300); // Animation start delay
 
       return;
     }
@@ -281,11 +285,12 @@ const BattlePage: React.FC = () => {
           <HexGrid
             tiles={tiles}
             onTileClick={handleTileClick}
-            selectedTile={selectedTile!}
+            selectedTile={selectedTile}
             highlightedTiles={[...highlightedTiles, ...placementTiles]}
             selectedCard={selectedCard}
             size={40} // Size of hexagons
-            showDividingLine={true} // Added prop to show dividing line
+            showDividingLine={true}
+            unitAnimations={unitAnimations} // Pass the unitAnimations from state
           />
 
           {/* Battle controls (only visible during battle phase) */}

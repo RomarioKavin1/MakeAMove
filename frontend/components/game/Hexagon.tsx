@@ -49,8 +49,8 @@ const Hexagon: React.FC<HexagonProps> = ({
 
   // Determine border styling
   const getBorderStyles = () => {
-    if (isSelected) return "stroke-yellow-400 stroke-[3px]";
-    if (isHighlighted) return "stroke-green-400 stroke-[2px]";
+    if (isSelected) return "stroke-yellow-400 stroke-[1px]";
+    if (isHighlighted) return "stroke-green-400 stroke-[1px]";
     return "stroke-gray-700 stroke-[1px]";
   };
 
