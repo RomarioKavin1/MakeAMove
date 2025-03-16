@@ -462,10 +462,10 @@ const HexGrid: React.FC<HexGridProps> = ({
             // Set border color based on side
             const borderColor =
               tile.position.q < 0
-                ? "rgba(59, 130, 246, 0.4)" // player blue
+                ? "rgba(59, 130, 246, 0.8)" // player blue - increased opacity
                 : tile.position.q > 0
-                ? "rgba(239, 68, 68, 0.4)" // enemy red
-                : "rgba(107, 114, 128, 0.4)"; // neutral gray
+                ? "rgba(239, 68, 68, 0.8)" // enemy red - increased opacity
+                : "rgba(107, 114, 128, 0.6)"; // neutral gray
 
             // Calculate hex sides for 3D effect
             const points = getHexPoints(size);
@@ -487,13 +487,13 @@ const HexGrid: React.FC<HexGridProps> = ({
                   transform={`translate(${size * 0.05}, ${size * 0.05})`}
                 />
 
-                {/* Territory indicator (subtle colored border) */}
+                {/* Territory indicator (improved borders) */}
                 <polygon
                   points={points}
                   fill="none"
                   stroke={borderColor}
-                  strokeWidth="4"
-                  strokeOpacity="0.7"
+                  strokeWidth="5" // Increased from 4
+                  strokeOpacity="0.9" // Increased from 0.7 for better visibility
                 />
 
                 {/* 3D Hex Sides */}
@@ -526,12 +526,12 @@ const HexGrid: React.FC<HexGridProps> = ({
                   points={points}
                   className={`${
                     isSelected
-                      ? "stroke-yellow-400 stroke-[3px]"
+                      ? "stroke-yellow-400 stroke-[4px]" // Increased from 3px
                       : isHighlighted
-                      ? "stroke-green-400 stroke-[2px]"
+                      ? "stroke-green-400 stroke-[3px]" // Increased from 2px
                       : isPlacementTile
-                      ? "stroke-blue-400 stroke-[2px] stroke-dasharray-2"
-                      : "stroke-gray-700 stroke-[1px]"
+                      ? "stroke-blue-400 stroke-[3px] stroke-dasharray-4" // Increased from 2px
+                      : "stroke-gray-800 stroke-[2px]" // Increased from 1px
                   }`}
                   fill={`url(#${tile.terrain.type}-pattern)`}
                   filter="url(#drop-shadow)"
@@ -737,7 +737,7 @@ const renderUnit = (
             ? "rgba(59,130,246,0.5)"
             : "rgba(239,68,68,0.5)"
         }
-        strokeWidth="2"
+        strokeWidth="3" // Increased from 2 for better visibility
         filter="url(#drop-shadow)"
       />
 
@@ -765,13 +765,13 @@ const renderUnit = (
         </div>
       </foreignObject>
 
-      {/* Improved Health Bar with Background */}
+      {/* Improved Unit Health Bar with Background */}
       <rect
         x={-unitSize / 2}
         y={unitSize / 3}
         width={unitSize}
-        height={6}
-        rx={3}
+        height={10} // Increased from 6 to match fortress
+        rx={5} // Increased from 3 to match fortress
         fill="rgba(0,0,0,0.8)"
         stroke="#333"
         strokeWidth="1"
@@ -780,8 +780,8 @@ const renderUnit = (
         x={-unitSize / 2}
         y={unitSize / 3}
         width={(unitSize * healthPercentage) / 100}
-        height={6}
-        rx={3}
+        height={10}
+        rx={5}
         fill={
           healthPercentage > 60
             ? "rgba(16,185,129,0.9)" // Green
@@ -791,26 +791,41 @@ const renderUnit = (
         }
       />
 
-      {/* Unit Stats Display - Better Positioned */}
+      {/* Add health text to match fortress */}
+      <text
+        x={0}
+        y={unitSize / 3 + 5} // Center in the health bar
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fontSize={unitSize / 6}
+        fill="white"
+        fontWeight="bold"
+        className="pointer-events-none"
+        style={{ textShadow: "1px 1px 2px rgba(0,0,0,1)" }}
+      >
+        {unit.health}
+      </text>
+
+      {/* Unit Stats Display - Better Positioned and Enlarged */}
       {/* Attack Value */}
       <g
         transform={`translate(${-unitSize / 2 + 12}, ${-unitSize / 2 + 12})`}
         filter="url(#drop-shadow)"
       >
         <circle
-          r={unitSize / 6}
+          r={unitSize / 5} // Increased from 1/6
           fill="rgba(220,38,38,0.9)"
           stroke="white"
-          strokeWidth="1"
+          strokeWidth="2" // Increased from 1
         />
         <text
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={unitSize / 6}
+          fontSize={unitSize / 5} // Increased from 1/6
           fill="white"
           fontWeight="bold"
           className="pointer-events-none"
-          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }} // Enhanced shadow
         >
           {unit.attack}
         </text>
@@ -822,34 +837,34 @@ const renderUnit = (
         filter="url(#drop-shadow)"
       >
         <circle
-          r={unitSize / 6}
+          r={unitSize / 5} // Increased from 1/6
           fill="rgba(37,99,235,0.9)"
           stroke="white"
-          strokeWidth="1"
+          strokeWidth="2" // Increased from 1
         />
         <text
           textAnchor="middle"
           dominantBaseline="middle"
-          fontSize={unitSize / 6}
+          fontSize={unitSize / 5} // Increased from 1/6
           fill="white"
           fontWeight="bold"
           className="pointer-events-none"
-          style={{ textShadow: "1px 1px 1px rgba(0,0,0,0.7)" }}
+          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }} // Enhanced shadow
         >
           {unit.range}
         </text>
       </g>
 
-      {/* Status Indicators (moved/attacked) */}
+      {/* Enhanced Status Indicators (moved/attacked) */}
       <g transform="translate(0, 0)" pointerEvents="none">
         {unit.hasMoved && (
           <circle
             cx={-unitSize / 4}
             cy={-unitSize / 4}
-            r={unitSize / 10}
-            fill="rgba(0,0,0,0.5)"
+            r={unitSize / 9} // Increased from 1/10
+            fill="rgba(75,85,99,0.8)" // Changed from black to dark gray
             stroke="white"
-            strokeWidth="1"
+            strokeWidth="1.5" // Increased from 1
           >
             <title>Unit has moved</title>
           </circle>
@@ -858,10 +873,10 @@ const renderUnit = (
           <circle
             cx={unitSize / 4}
             cy={-unitSize / 4}
-            r={unitSize / 10}
-            fill="rgba(0,0,0,0.5)"
+            r={unitSize / 9} // Increased from 1/10
+            fill="rgba(75,85,99,0.8)" // Changed from black to dark gray
             stroke="white"
-            strokeWidth="1"
+            strokeWidth="1.5" // Increased from 1
           >
             <title>Unit has attacked</title>
           </circle>
