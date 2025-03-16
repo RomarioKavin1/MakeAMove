@@ -176,34 +176,68 @@ const BattlePage: React.FC = () => {
       return;
     }
 
-    const isAttackTarge = possibleAttacks.some(
-      (pos) => pos.q === tile.position.q && pos.r === tile.position.r
-    );
-
-    if (isAttackTarge) {
-      // Set this as the attack target but don't immediately attack
-      setAttackTarget(tile.position);
-      return;
-    }
     // If a card is selected, try to place it
     if (selectedCard) {
-      // Check if this is a valid placement tile by finding valid placements
-      const placementPositions = getPlacementPositions(tiles);
-      const isValidPlacement = placementPositions.some(
+      // Check if this is a valid placement tile
+      const isValidPlacement = placementTiles.some(
         (pos) => pos.q === tile.position.q && pos.r === tile.position.r
       );
 
       if (isValidPlacement) {
         dispatch({ type: "PLACE_UNIT", payload: tile.position });
-      } else {
-        console.log(
-          "Cannot place unit here - must be adjacent to a player fortress"
-        );
       }
       return;
     }
 
-    // Check if clicked on a possible movement destination
+    // If we're selecting a player's unit
+    if (tile.unit && tile.unit.owner === "player") {
+      // Select the unit - this will calculate possible moves/attacks
+      dispatch({ type: "SELECT_TILE", payload: tile });
+
+      // The possibleAttacks array will be updated in the reducer
+      return;
+    }
+
+    // If we already have a selected unit, check if this is an attack target
+    if (selectedTile?.unit && !selectedTile.unit.hasAttacked) {
+      // Check if this tile is in the possible attacks list
+      const isAttackTarget = possibleAttacks.some(
+        (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+      );
+
+      if (isAttackTarget) {
+        console.log(
+          `Attacking target at (${tile.position.q}, ${tile.position.r})`
+        );
+
+        // Start attack animation
+        dispatch({
+          type: "UNIT_ANIMATION_START",
+          payload: {
+            unitId: selectedTile.unit.instanceId,
+            state: "attack",
+            target: tile.position,
+          },
+        });
+
+        // Perform attack after animation starts
+        setTimeout(() => {
+          dispatch({ type: "ATTACK", payload: tile.position });
+
+          // End animation
+          setTimeout(() => {
+            dispatch({
+              type: "UNIT_ANIMATION_END",
+              payload: { unitId: selectedTile.unit!.instanceId },
+            });
+          }, 700);
+        }, 600);
+
+        return;
+      }
+    }
+
+    // If a move destination, handle walking animation and movement
     const isMoveDestination = possibleMoves.some(
       (pos) => pos.q === tile.position.q && pos.r === tile.position.r
     );
@@ -219,52 +253,18 @@ const BattlePage: React.FC = () => {
         },
       });
 
-      // For walking animation to be visible, we use a long delay
-      // to allow player to see the walking animation
+      // For walking animation to be visible, use a long delay
       setTimeout(() => {
-        // Move the unit after animation plays for a moment
         dispatch({ type: "MOVE_UNIT", payload: tile.position });
 
-        // End animation after the move with a short delay
+        // End animation after the move
         setTimeout(() => {
           dispatch({
             type: "UNIT_ANIMATION_END",
             payload: { unitId: selectedTile.unit!.instanceId },
           });
-        }, 500); // Animation end delay
-      }, 1000); // Long delay to see walking animation
-
-      return;
-    }
-
-    // Check if clicked on a possible attack target
-    const isAttackTarget = possibleAttacks.some(
-      (pos) => pos.q === tile.position.q && pos.r === tile.position.r
-    );
-
-    if (isAttackTarget && selectedTile?.unit) {
-      // Start attack animation before actual attack
-      dispatch({
-        type: "UNIT_ANIMATION_START",
-        payload: {
-          unitId: selectedTile.unit.instanceId,
-          state: "attack",
-          target: tile.position,
-        },
-      });
-
-      // Delay the actual attack to allow animation to play
-      setTimeout(() => {
-        dispatch({ type: "ATTACK", payload: tile.position });
-
-        // End animation after a delay
-        setTimeout(() => {
-          dispatch({
-            type: "UNIT_ANIMATION_END",
-            payload: { unitId: selectedTile.unit!.instanceId },
-          });
-        }, 700); // Animation end delay
-      }, 600); // Attack delay
+        }, 500);
+      }, 900);
 
       return;
     }

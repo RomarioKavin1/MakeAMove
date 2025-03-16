@@ -212,6 +212,7 @@ function getAdjacentPositions(position: Position): Position[] {
 }
 
 // Find all possible attack targets for a unit
+
 export const getPossibleAttackTargets = (
   unit: CardInstance,
   tiles: HexTile[],
@@ -219,7 +220,8 @@ export const getPossibleAttackTargets = (
 ): Position[] => {
   if (!unit.position) return [];
 
-  const attackRange = unit.range || 1; // Default to range 1 if not specified
+  // Use the unit's range property - crucial for attack range calculation
+  const attackRange = unit.range || 1; // Default to 1 if not specified
   console.log(
     `Calculating attack targets for unit at ${unit.position.q},${unit.position.r} with range ${attackRange}`
   );
@@ -227,17 +229,20 @@ export const getPossibleAttackTargets = (
   const targets: Position[] = [];
 
   // Check each tile to see if it's within attack range
-  tiles.forEach((tile) => {
+  for (const tile of tiles) {
     // Skip if this is the unit's own position
     if (
-      tile.position.q === unit.position!.q &&
-      tile.position.r === unit.position!.r
+      tile.position.q === unit.position.q &&
+      tile.position.r === unit.position.r
     ) {
-      return;
+      continue;
     }
 
-    // Calculate distance from unit to this tile
-    const distance = getHexDistance(unit.position!, tile.position);
+    // Calculate distance using hex grid distance formula
+    const distance = getHexDistance(unit.position, tile.position);
+    console.log(
+      `Distance to (${tile.position.q}, ${tile.position.r}): ${distance}`
+    );
 
     // If within attack range, check if there's a valid target
     if (distance <= attackRange) {
@@ -249,9 +254,19 @@ export const getPossibleAttackTargets = (
       // Add to targets if there's an enemy unit or fortress
       if (hasEnemyUnit || hasEnemyFortress) {
         targets.push(tile.position);
+
+        if (hasEnemyUnit) {
+          console.log(
+            `Found enemy unit at (${tile.position.q}, ${tile.position.r})`
+          );
+        } else {
+          console.log(
+            `Found enemy fortress at (${tile.position.q}, ${tile.position.r})`
+          );
+        }
       }
     }
-  });
+  }
 
   console.log(`Found ${targets.length} possible attack targets`);
   return targets;

@@ -168,7 +168,6 @@ const gameReducer = (
         highlightedTiles: [],
       };
     }
-
     case "SELECT_TILE": {
       const selectedTile = action.payload;
 
@@ -182,9 +181,9 @@ const gameReducer = (
         };
       }
 
-      // If a unit is selected, check if it's a player's unit
+      // If selecting a unit
       if (selectedTile.unit) {
-        // Only allow selecting player's units, not AI units
+        // Only allow selecting player's units during player turn
         if (
           selectedTile.unit.owner !== "player" &&
           state.gameState.currentPlayer === "player"
@@ -193,29 +192,24 @@ const gameReducer = (
           return state;
         }
 
-        // Only allow selecting AI units during AI turn
-        if (
-          selectedTile.unit.owner !== "ai" &&
-          state.gameState.currentPlayer === "ai"
-        ) {
-          console.log("Cannot select player units during AI turn");
-          return state;
-        }
-
         if (selectedTile.unit.canAct) {
           const unit = selectedTile.unit;
 
-          // Determine possible moves
+          // Calculate possible moves if unit hasn't moved
           const possibleMoves = !unit.hasMoved
             ? getPossibleMoves(unit, state.tiles, state.gridSize)
             : [];
 
-          // Determine possible attacks
+          // Calculate possible attack targets if unit hasn't attacked
           const possibleAttacks = !unit.hasAttacked
             ? getPossibleAttackTargets(unit, state.tiles, state.gridSize)
             : [];
 
-          // Highlight the possible moves and attacks
+          console.log(
+            `Found ${possibleAttacks.length} possible attack targets for selected unit`
+          );
+
+          // Highlight all tiles the unit can interact with
           const highlightedTiles = [...possibleMoves, ...possibleAttacks];
 
           return {
@@ -229,7 +223,7 @@ const gameReducer = (
         }
       }
 
-      // Regular tile selection
+      // Regular tile selection with no special behavior
       return {
         ...state,
         selectedCard: null,
@@ -239,7 +233,6 @@ const gameReducer = (
         highlightedTiles: [],
       };
     }
-
     case "PLACE_FORTRESS": {
       // Can only place 2 fortresses during setup
       if (state.placedFortresses >= 2 || state.gameState.phase !== "setup") {

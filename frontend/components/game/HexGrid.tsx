@@ -11,17 +11,20 @@ interface HexGridProps {
   onTileClick: (tile: HexTile) => void;
   selectedTile?: HexTile | null;
   highlightedTiles?: Position[];
+  possibleAttacks?: Position[]; // Add this prop
   selectedCard?: CardInstance | null;
   size: number;
   showDividingLine?: boolean;
   unitAnimations?: Record<string, UnitAnimation>;
 }
 
+// Update the component definition to include possibleAttacks
 const HexGrid: React.FC<HexGridProps> = ({
   tiles,
   onTileClick,
   selectedTile,
   highlightedTiles = [],
+  possibleAttacks = [], // Add default value
   selectedCard,
   size,
   showDividingLine = false,
@@ -453,6 +456,9 @@ const HexGrid: React.FC<HexGridProps> = ({
             const isPlacementTile = placementPositions.some(
               (pos) => pos.q === tile.position.q && pos.r === tile.position.r
             );
+            const isAttackTarget = possibleAttacks.some(
+              (pos) => pos.q === tile.position.q && pos.r === tile.position.r
+            );
 
             // Add player/ai side visualization with colored borders
             const sideClass =
@@ -544,7 +550,36 @@ const HexGrid: React.FC<HexGridProps> = ({
                   }`}
                   pointerEvents="none"
                 />
-
+                {isAttackTarget && (
+                  <g>
+                    {/* Red attack target indicator */}
+                    <circle
+                      r={size * 0.7}
+                      fill="none"
+                      stroke="rgba(220, 38, 38, 0.7)"
+                      strokeWidth="3"
+                      strokeDasharray="5,5"
+                      className="animate-pulse"
+                    />
+                    {/* Crosshair */}
+                    <line
+                      x1={-size * 0.2}
+                      y1="0"
+                      x2={size * 0.2}
+                      y2="0"
+                      stroke="rgba(220, 38, 38, 0.9)"
+                      strokeWidth="2"
+                    />
+                    <line
+                      x1="0"
+                      y1={-size * 0.2}
+                      x2="0"
+                      y2={size * 0.2}
+                      stroke="rgba(220, 38, 38, 0.9)"
+                      strokeWidth="2"
+                    />
+                  </g>
+                )}
                 {/* Territory indicator (improved borders) - Must be last to appear above all */}
                 <polygon
                   points={points}
