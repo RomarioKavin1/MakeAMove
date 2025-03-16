@@ -1,5 +1,5 @@
-import { Position } from "./Game";
-import { TerrainType } from "./Terrain";
+// src/types/Card.ts
+import { Position, TerrainType } from "./Game";
 
 export type CardType =
   | "warrior"
