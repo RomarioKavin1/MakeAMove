@@ -354,7 +354,7 @@ const BattlePage: React.FC = () => {
             selectedTile={selectedTile}
             highlightedTiles={[...highlightedTiles, ...placementTiles]}
             selectedCard={selectedCard}
-            size={40} // Size of hexagons
+            size={100} // Size of hexagons
             showDividingLine={true}
             unitAnimations={unitAnimations} // Pass the unitAnimations from state
           />

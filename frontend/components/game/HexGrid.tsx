@@ -513,8 +513,9 @@ const HexGrid: React.FC<HexGridProps> = ({
                         points={`${x1},${y1} ${x2},${y2} ${x2},${
                           y2 + height
                         } ${x1},${y1 + height}`}
-                        fill={`url(#${tile.terrain.type}-pattern)`}
+                        fill={`rgba(0,0,0,0.5)`}
                         opacity="0.7"
+                        className="z-0"
                       />
                     );
                   }
@@ -526,13 +527,14 @@ const HexGrid: React.FC<HexGridProps> = ({
                   points={points}
                   fill={`url(#${tile.terrain.type}-pattern)`}
                   filter="url(#drop-shadow)"
+                  className="z-10"
                 />
 
                 {/* Hex Top Highlight */}
                 <polygon
                   points={points}
                   fill="url(#hex-top)"
-                  className="pointer-events-none"
+                  className="pointer-events-none "
                 />
 
                 {/* Selection/Highlight Border - Moved to appear on top of everything */}
@@ -803,7 +805,7 @@ const renderUnit = (
         height={unitSize * 1.5}
         className="pointer-events-none overflow-visible"
       >
-        <div className="w-full h-full overflow-visible">
+        <div className="w-full h-full overflow-visible scale-150">
           <img
             src={assets[animationState]}
             alt={unit.name}
@@ -860,7 +862,7 @@ const renderUnit = (
 
       {/* Unit Stats Display - Better Positioned and Enlarged */}
       {/* Attack Value */}
-      <g
+      {/* <g
         transform={`translate(${-unitSize / 2 + 12}, ${-unitSize / 2 + 12})`}
         filter="url(#drop-shadow)"
       >
@@ -881,10 +883,10 @@ const renderUnit = (
         >
           {unit.attack}
         </text>
-      </g>
+      </g> */}
 
       {/* Range Indicator */}
-      <g
+      {/* <g
         transform={`translate(${unitSize / 2 - 12}, ${-unitSize / 2 + 12})`}
         filter="url(#drop-shadow)"
       >
@@ -905,7 +907,7 @@ const renderUnit = (
         >
           {unit.range}
         </text>
-      </g>
+      </g> */}
 
       {/* Enhanced Status Indicators (moved/attacked) */}
       <g transform="translate(0, 0)" pointerEvents="none">
