@@ -1,0 +1,16 @@
+[package]
+name = "SimpleRPG"
+version = "1.0.0"
+authors = []
+
+[addresses]
+simple_rpg_addr = "0x72db00b41987c349f8df1ac82dc9b1926b4b107411733da1f488985b97c169c2"
+
+[dev-addresses]
+
+[dependencies.AptosFramework]
+git = "https://github.com/aptos-labs/aptos-framework.git"
+rev = "mainnet"
+subdir = "aptos-framework"
+
+[dev-dependencies]
