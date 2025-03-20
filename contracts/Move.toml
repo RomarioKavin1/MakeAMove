@@ -4,7 +4,8 @@ version = "1.0.0"
 authors = []
 
 [addresses]
-simple_rpg_addr = "0x72db00b41987c349f8df1ac82dc9b1926b4b107411733da1f488985b97c169c2"
+simple_rpg_addr = "0x12892cd38f074dd522d94ce16d11cf5b6102beb428e75bb431e7da12c409fbf3"
+my_address = "_"
 
 [dev-addresses]
 
