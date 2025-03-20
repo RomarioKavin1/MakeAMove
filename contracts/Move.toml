@@ -1,10 +1,10 @@
 [package]
-name = "SimpleRPG"
+name = "MakeAMove"
 version = "1.0.0"
 authors = []
 
 [addresses]
-simple_rpg_addr = "0x12892cd38f074dd522d94ce16d11cf5b6102beb428e75bb431e7da12c409fbf3"
+make_a_move_addr = "0x11e2d0c73089ef8d8a5758bd85c5a00101ab43b97123eae32e2dc8309cf880e4"
 my_address = "_"
 
 [dev-addresses]

@@ -1,4 +1,4 @@
-module simple_rpg_addr::simple_rpg {
+module make_a_move_addr::make_a_move {
     use std::error;
     use std::signer;
     use std::string::String;
@@ -88,7 +88,7 @@ module simple_rpg_addr::simple_rpg {
     ) acquires GameStore {
         let creator_addr = signer::address_of(creator);
         
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         let first_player = if (player_starts) { creator_addr } else { ai_agent };
         
@@ -138,7 +138,7 @@ module simple_rpg_addr::simple_rpg {
     ) acquires GameStore {
         let player_addr = signer::address_of(player);
         
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         let (found, game_idx) = find_game_by_id(game_store, game_id);
         assert!(found, error::not_found(EGAME_NOT_FOUND));
         
@@ -197,7 +197,7 @@ module simple_rpg_addr::simple_rpg {
         let player_addr = signer::address_of(player);
         
         // Get the game store
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         // Find the game
         let (found, game_idx) = find_game_by_id(game_store, game_id);
@@ -254,7 +254,7 @@ module simple_rpg_addr::simple_rpg {
         let player_addr = signer::address_of(player);
         
         // Get the game store
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         // Find the game
         let (found, game_idx) = find_game_by_id(game_store, game_id);
@@ -306,7 +306,7 @@ module simple_rpg_addr::simple_rpg {
         let player_addr = signer::address_of(player);
         
         // Get the game store
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         // Find the game
         let (found, game_idx) = find_game_by_id(game_store, game_id);
@@ -353,7 +353,7 @@ module simple_rpg_addr::simple_rpg {
     ) acquires GameStore {
         let player_addr = signer::address_of(player);
         
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         let (found, game_idx) = find_game_by_id(game_store, game_id);
         assert!(found, error::not_found(EGAME_NOT_FOUND));
@@ -386,7 +386,7 @@ module simple_rpg_addr::simple_rpg {
         let player_addr = signer::address_of(player);
         
         // Get the game store
-        let game_store = borrow_global_mut<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global_mut<GameStore>(@make_a_move_addr);
         
         // Find the game
         let (found, game_idx) = find_game_by_id(game_store, game_id);
@@ -435,7 +435,7 @@ module simple_rpg_addr::simple_rpg {
 
     #[view]
     public fun get_game(game_id: u64): (address, address, u64, address, bool, address) acquires GameStore {
-        let game_store = borrow_global<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global<GameStore>(@make_a_move_addr);
         
         let (found, game_idx) = find_game_by_id(game_store, game_id);
         assert!(found, error::not_found(EGAME_NOT_FOUND));
@@ -458,7 +458,7 @@ module simple_rpg_addr::simple_rpg {
 
     #[view]
     public fun get_player_games(player: address): vector<u64> acquires GameStore {
-        let game_store = borrow_global<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global<GameStore>(@make_a_move_addr);
         let game_ids = vector::empty<u64>();
         
         let games_len = vector::length(&game_store.games);
@@ -477,7 +477,7 @@ module simple_rpg_addr::simple_rpg {
 
     #[view]
     public fun get_game_units(game_id: u64): vector<Unit> acquires GameStore {
-        let game_store = borrow_global<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global<GameStore>(@make_a_move_addr);
         
         let (found, game_idx) = find_game_by_id(game_store, game_id);
         assert!(found, error::not_found(EGAME_NOT_FOUND));
@@ -489,7 +489,7 @@ module simple_rpg_addr::simple_rpg {
 
     #[view]
     public fun get_game_fortresses(game_id: u64): vector<Fortress> acquires GameStore {
-        let game_store = borrow_global<GameStore>(@simple_rpg_addr);
+        let game_store = borrow_global<GameStore>(@make_a_move_addr);
         
         let (found, game_idx) = find_game_by_id(game_store, game_id);
         assert!(found, error::not_found(EGAME_NOT_FOUND));
