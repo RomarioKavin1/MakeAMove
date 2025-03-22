@@ -22,16 +22,16 @@ const Card: React.FC<CardProps> = ({
   size = "md",
 }) => {
   const sizeClasses = {
-    sm: "w-24 h-32",
-    md: "w-32 h-44",
-    lg: "w-40 h-56",
+    sm: styles.cardSm,
+    md: styles.cardMd,
+    lg: styles.cardLg,
   };
 
-  const rarityColors = {
-    common: "from-gray-400 to-gray-600",
-    uncommon: "from-green-400 to-green-600",
-    rare: "from-blue-400 to-blue-600",
-    legendary: "from-purple-400 to-purple-700",
+  const rarityClasses = {
+    common: styles.rarityCommon,
+    uncommon: styles.rarityUncommon,
+    rare: styles.rarityRare,
+    legendary: styles.rarityLegendary,
   };
 
   // Get card image path based on card type
@@ -40,98 +40,89 @@ const Card: React.FC<CardProps> = ({
     return `/assets/cards/${card.type}_1.png`;
   };
 
+  // Get background pattern based on card type
+  const getCardBackground = (cardType: string) => {
+    const patterns = {
+      warrior: styles.bgWarrior,
+      archer: styles.bgArcher,
+      healer: styles.bgHealer,
+      tank: styles.bgTank,
+      mage: styles.bgMage,
+      scout: styles.bgScout,
+    };
+
+    return patterns[cardType as keyof typeof patterns] || styles.bgDefault;
+  };
+
   return (
     <div
-      className={`
-        ${sizeClasses[size]} 
-        relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 
-        ${
-          isSelected
-            ? "ring-4 ring-yellow-400 transform scale-105 shadow-xl shadow-blue-500/20"
-            : "hover:shadow-lg hover:shadow-blue-500/10 hover:transform hover:scale-102"
-        } 
-        bg-gradient-to-b ${rarityColors[card.rarity]}
-      `}
+      className={`${styles.cardContainer} ${sizeClasses[size]} ${
+        isSelected ? styles.cardSelected : ""
+      } ${rarityClasses[card.rarity]}`}
       onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
     >
-      {/* Card Border & Frame - 3D Effect */}
-      <div className="absolute inset-0.5 rounded-lg bg-gradient-to-b from-white/10 to-transparent pointer-events-none z-20"></div>
-      <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-white/20 to-transparent pointer-events-none z-10"></div>
+      {/* Pixel border */}
+      <div className={styles.pixelBorder}></div>
 
       {/* Card Header */}
-      <div className="px-2 py-1 bg-black bg-opacity-70 text-center relative z-10">
-        <h3 className="text-white font-bold text-sm truncate">{card.name}</h3>
+      <div className={styles.cardHeader}>
+        <h3 className={styles.cardName}>{card.name}</h3>
       </div>
 
       {/* Card Image */}
-      <div className="h-1/2 relative overflow-hidden">
-        <Image
-          src={getCardImagePath(card.type)}
-          alt={card.name}
-          fill
-          className="object-cover transform transition-transform duration-700 hover:scale-110"
-        />
-        <div className="absolute top-0 left-0 bg-black bg-opacity-60 px-1 rounded-br text-xs text-white z-10">
-          {card.type}
+      <div
+        className={`${styles.imageContainer} ${getCardBackground(card.type)}`}
+      >
+        <div className={styles.imageWrapper}>
+          <Image
+            src={getCardImagePath(card.type)}
+            alt={card.name}
+            width={100}
+            height={100}
+            className={styles.cardImage}
+          />
         </div>
-        <div className="absolute top-0 right-0 px-1.5 py-0.5 rounded-bl bg-black bg-opacity-60 text-xs">
-          <span
-            className={`
-            ${
-              card.rarity === "legendary"
-                ? "text-purple-300"
-                : card.rarity === "rare"
-                ? "text-blue-300"
-                : card.rarity === "uncommon"
-                ? "text-green-300"
-                : "text-gray-300"
-            }
-          `}
-          >
-            {card.rarity}
-          </span>
+        <div className={styles.cardType}>{card.type}</div>
+        <div className={styles.cardRarity}>
+          <span className={styles.rarityText}>{card.rarity}</span>
         </div>
       </div>
 
-      {/* Card Stats - with enhanced 3D look */}
-      <div className="p-1 bg-black bg-opacity-70 text-white text-xs flex justify-between">
-        <div className="flex items-center">
-          <span className="inline-block w-3 h-3 bg-red-500 rounded-full mr-1 shadow-sm shadow-red-300"></span>
-          <span>{card.attack}</span>
+      {/* Card Stats */}
+      <div className={styles.statsContainer}>
+        <div className={styles.statItem}>
+          <span className={`${styles.statIcon} ${styles.attackIcon}`}></span>
+          <span className={styles.statValue}>{card.attack}</span>
         </div>
-        <div className="flex items-center">
-          <span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-1 shadow-sm shadow-green-300"></span>
-          <span>{card.health}</span>
+        <div className={styles.statItem}>
+          <span className={`${styles.statIcon} ${styles.healthIcon}`}></span>
+          <span className={styles.statValue}>{card.health}</span>
         </div>
-        <div className="flex items-center">
-          <span className="inline-block w-3 h-3 bg-blue-500 rounded-full mr-1 shadow-sm shadow-blue-300"></span>
-          <span>{card.range}</span>
+        <div className={styles.statItem}>
+          <span className={`${styles.statIcon} ${styles.rangeIcon}`}></span>
+          <span className={styles.statValue}>{card.range}</span>
         </div>
       </div>
 
-      {/* Card Description - with subtle scroll effect if too long */}
-      <div className="p-1 bg-black bg-opacity-50 text-white text-xs max-h-1/4 overflow-y-auto">
-        <p className="line-clamp-3">{card.description}</p>
+      {/* Card Description */}
+      <div className={styles.descriptionContainer}>
+        <p className={styles.description}>{card.description}</p>
       </div>
 
-      {/* Special Ability (if exists) - with glow effect */}
+      {/* Special Ability */}
       {card.specialAbility && (
-        <div className="absolute bottom-0 left-0 right-0 bg-purple-800 bg-opacity-70 px-1 py-0.5 text-white text-xs">
-          <div className="flex items-center">
-            <span className="inline-block w-2 h-2 bg-purple-400 rounded-full mr-1 animate-pulse"></span>
+        <div className={styles.specialAbility}>
+          <div className={styles.specialAbilityContent}>
+            <span className={styles.specialAbilityIcon}></span>
             {card.specialAbility.name}
           </div>
         </div>
       )}
 
-      {/* Card glow on selection */}
-      {isSelected && (
-        <div className="absolute inset-0 rounded-lg pointer-events-none z-0 animate-pulse">
-          <div className="absolute inset-0 rounded-lg bg-gradient-to-b from-yellow-400/30 to-yellow-600/30"></div>
-        </div>
-      )}
+      {/* Selection indicator */}
+      {isSelected && <div className={styles.selectionGlow}></div>}
     </div>
   );
 };

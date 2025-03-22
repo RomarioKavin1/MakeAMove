@@ -1,200 +1,352 @@
-/* src/components/game/Card.module.css */
+/* Card.module.css */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
 
-.card {
+/* Card container with size variants */
+.cardContainer {
   position: relative;
-  border-radius: 0.5rem;
+  border: 4px solid #111;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  background-color: #000;
+  image-rendering: pixelated;
 }
 
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+.cardSm {
+  width: 96px;
+  height: 128px;
 }
 
-.selected {
+.cardMd {
+  width: 128px;
+  height: 176px;
+}
+
+.cardLg {
+  width: 160px;
+  height: 224px;
+}
+
+/* Pixel border effect */
+.pixelBorder {
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Card selection state */
+.cardSelected {
+  border-color: #fbbf24;
   transform: scale(1.05);
-  box-shadow: 0 0 0 2px #fbbf24, 0 10px 15px -3px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.6);
 }
 
-/* Card 3D effect elements */
-.cardTop {
-  position: absolute;
-  inset: 0.5px;
-  border-radius: 0.5rem;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.1), transparent);
-  pointer-events: none;
-  z-index: 20;
+.cardSelected .pixelBorder {
+  border-color: rgba(251, 191, 36, 0.4);
 }
 
-.cardHighlight {
-  position: absolute;
-  inset-x: 0;
-  top: 0;
-  height: 33.333333%;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.2), transparent);
-  pointer-events: none;
-  z-index: 10;
+/* Rarity styling */
+.rarityCommon {
+  background: linear-gradient(to bottom, #1f2937, #111827);
+  border-color: #6b7280;
 }
 
-/* Card content sections */
+.rarityUncommon {
+  background: linear-gradient(to bottom, #065f46, #064e3b);
+  border-color: #10b981;
+}
+
+.rarityRare {
+  background: linear-gradient(to bottom, #1e40af, #1e3a8a);
+  border-color: #3b82f6;
+}
+
+.rarityLegendary {
+  background: linear-gradient(to bottom, #6d28d9, #5b21b6);
+  border-color: #8b5cf6;
+}
+
+/* Card Header */
 .cardHeader {
-  padding: 0.25rem 0.5rem;
-  background-color: rgba(0, 0, 0, 0.7);
+  padding: 4px;
+  background-color: rgba(0, 0, 0, 0.8);
   text-align: center;
+  border-bottom: 2px solid currentColor;
   position: relative;
-  z-index: 10;
+  z-index: 1;
 }
 
-.cardTitle {
+.cardName {
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
   color: white;
-  font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: uppercase;
 }
 
-.cardImageContainer {
-  height: 50%;
+/* Image Container with cool backgrounds */
+.imageContainer {
   position: relative;
+  height: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
-.cardImage {
-  object-fit: cover;
-  transition: transform 0.7s ease;
+/* Image wrapper to ensure proper containing */
+.imageWrapper {
+  width: 80%;
+  height: 80%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.cardImage:hover {
-  transform: scale(1.1);
+.cardImage {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+/* Card type and rarity labels */
+.cardType,
+.cardRarity {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.7);
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 6px;
+  padding: 2px 4px;
+  z-index: 1;
 }
 
 .cardType {
-  position: absolute;
   top: 0;
   left: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  padding: 0 0.25rem;
-  border-bottom-right-radius: 0.25rem;
-  font-size: 0.75rem;
   color: white;
-  z-index: 10;
+  text-transform: uppercase;
 }
 
 .cardRarity {
-  position: absolute;
   top: 0;
   right: 0;
-  padding: 0.125rem 0.375rem;
-  border-bottom-left-radius: 0.25rem;
-  background-color: rgba(0, 0, 0, 0.6);
-  font-size: 0.75rem;
+  text-transform: uppercase;
 }
 
-/* Card stat indicators */
-.cardStats {
-  padding: 0.25rem;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  font-size: 0.75rem;
+.rarityCommon .rarityText {
+  color: #9ca3af;
+}
+.rarityUncommon .rarityText {
+  color: #34d399;
+}
+.rarityRare .rarityText {
+  color: #60a5fa;
+}
+.rarityLegendary .rarityText {
+  color: #c4b5fd;
+}
+
+/* Stats container */
+.statsContainer {
   display: flex;
   justify-content: space-between;
+  padding: 4px;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
 }
 
-.statIndicator {
+.statItem {
   display: flex;
   align-items: center;
 }
 
-.statDot {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 9999px;
-  margin-right: 0.25rem;
-  box-shadow: 0 1px 2px 0 rgba(255, 255, 255, 0.2);
+.statIcon {
+  width: 8px;
+  height: 8px;
+  margin-right: 2px;
 }
 
-.attackDot {
-  background-color: rgb(239, 68, 68);
+.attackIcon {
+  background-color: #ef4444;
+  box-shadow: 0 0 3px 1px rgba(239, 68, 68, 0.5);
 }
 
-.healthDot {
-  background-color: rgb(34, 197, 94);
+.healthIcon {
+  background-color: #10b981;
+  box-shadow: 0 0 3px 1px rgba(16, 185, 129, 0.5);
 }
 
-.rangeDot {
-  background-color: rgb(59, 130, 246);
+.rangeIcon {
+  background-color: #3b82f6;
+  box-shadow: 0 0 3px 1px rgba(59, 130, 246, 0.5);
 }
 
-/* Card description */
-.cardDescription {
-  padding: 0.25rem;
-  background-color: rgba(0, 0, 0, 0.5);
+.statValue {
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 7px;
   color: white;
-  font-size: 0.75rem;
-  max-height: 25%;
+}
+
+/* Description container */
+.descriptionContainer {
+  padding: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+  max-height: 22%;
   overflow-y: auto;
 }
 
-.descriptionText {
+.description {
+  font-size: 6px;
+  line-height: 1.5;
+  color: #d1d5db;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-/* Special ability section */
+/* Special ability */
 .specialAbility {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: rgba(126, 34, 206, 0.7);
-  padding: 0.125rem 0.25rem;
-  color: white;
-  font-size: 0.75rem;
+  background-color: rgba(109, 40, 217, 0.8);
+  padding: 3px 4px;
 }
 
-.abilityIndicator {
+.specialAbilityContent {
   display: flex;
   align-items: center;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 6px;
+  color: white;
 }
 
-.abilityDot {
+.specialAbilityIcon {
   display: inline-block;
-  width: 0.5rem;
-  height: 0.5rem;
-  background-color: rgb(192, 132, 252);
-  border-radius: 9999px;
-  margin-right: 0.25rem;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  width: 6px;
+  height: 6px;
+  margin-right: 3px;
+  background-color: #c4b5fd;
+  animation: pulse 2s infinite;
 }
 
-/* Selection glow effect */
+/* Selection glow */
 .selectionGlow {
   position: absolute;
   inset: 0;
-  border-radius: 0.5rem;
   pointer-events: none;
-  z-index: 0;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  z-index: -1;
+  animation: glow 1.5s infinite alternate;
 }
 
-.glowGradient {
-  position: absolute;
-  inset: 0;
-  border-radius: 0.5rem;
+/* Background patterns for different card types */
+.bgWarrior {
   background: linear-gradient(
-    to bottom,
-    rgba(251, 191, 36, 0.3),
-    rgba(217, 119, 6, 0.3)
-  );
+      135deg,
+      rgba(239, 68, 68, 0.2) 0%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 10px,
+      rgba(239, 68, 68, 0.1) 10px,
+      rgba(239, 68, 68, 0.1) 20px
+    );
+}
+
+.bgArcher {
+  background: linear-gradient(
+      135deg,
+      rgba(16, 185, 129, 0.2) 0%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 10px,
+      rgba(16, 185, 129, 0.1) 10px,
+      rgba(16, 185, 129, 0.1) 20px
+    );
+}
+
+.bgHealer {
+  background: radial-gradient(
+      circle at center,
+      rgba(251, 191, 36, 0.2) 0%,
+      transparent 60%
+    ),
+    repeating-radial-gradient(
+      circle at center,
+      transparent,
+      transparent 15px,
+      rgba(251, 191, 36, 0.05) 15px,
+      rgba(251, 191, 36, 0.05) 20px
+    );
+}
+
+.bgTank {
+  background: linear-gradient(
+      135deg,
+      rgba(75, 85, 99, 0.3) 0%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 10px,
+      rgba(75, 85, 99, 0.1) 10px,
+      rgba(75, 85, 99, 0.1) 20px
+    );
+}
+
+.bgMage {
+  background: radial-gradient(
+      circle at center,
+      rgba(139, 92, 246, 0.3) 0%,
+      transparent 70%
+    ),
+    linear-gradient(rgba(139, 92, 246, 0.05) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.05) 2px, transparent 2px);
+  background-size: auto, 20px 20px, 20px 20px;
+}
+
+.bgScout {
+  background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.2) 0%,
+      transparent 100%
+    ),
+    linear-gradient(
+      45deg,
+      transparent calc(50% - 1px),
+      rgba(59, 130, 246, 0.1) calc(50% - 1px),
+      rgba(59, 130, 246, 0.1) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    );
+  background-size: auto, 20px 20px;
+}
+
+.bgDefault {
+  background: linear-gradient(
+      135deg,
+      rgba(107, 114, 128, 0.2) 0%,
+      transparent 100%
+    ),
+    linear-gradient(rgba(75, 85, 99, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(75, 85, 99, 0.05) 1px, transparent 1px);
+  background-size: auto, 10px 10px, 10px 10px;
 }
 
 /* Animations */
@@ -204,6 +356,33 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.4;
+  }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 4px 1px rgba(251, 191, 36, 0.5);
+  }
+  to {
+    box-shadow: 0 0 8px 2px rgba(251, 191, 36, 0.8);
+  }
+}
+
+/* Media query for mobile adjustments */
+@media (max-width: 640px) {
+  .cardName {
+    font-size: 8px;
+  }
+
+  .cardType,
+  .cardRarity,
+  .description,
+  .specialAbilityContent {
+    font-size: 5px;
+  }
+
+  .statValue {
+    font-size: 6px;
   }
 }
