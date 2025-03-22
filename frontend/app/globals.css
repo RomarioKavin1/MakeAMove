@@ -16,6 +16,76 @@ body {
   min-height: 100vh;
 }
 
+/* Arcade mode styling */
+body.arcade-mode {
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Pixelated text for arcade mode */
+.pixel-text {
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+}
+
+/* Text glow effect for arcade styling */
+.text-glow {
+  text-shadow: 0 0 4px currentColor, 0 0 8px currentColor;
+}
+
+/* Arcade button styles */
+.arcade-btn {
+  position: relative;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  text-transform: uppercase;
+  transition: transform 0.1s ease;
+  padding: 0.5rem 1rem;
+  border: none;
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.arcade-btn:hover {
+  transform: translateY(-2px);
+}
+
+.arcade-btn:active {
+  transform: translateY(3px);
+}
+
+.arcade-btn::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 5px;
+  background-color: rgba(0, 0, 0, 0.5);
+  transition: transform 0.1s ease;
+}
+
+.arcade-btn:active::before {
+  transform: translateY(5px);
+}
+
+/* Pixel grid background pattern */
+.pixel-grid-bg {
+  background-image: linear-gradient(
+      to right,
+      rgba(79, 70, 229, 0.05) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(79, 70, 229, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  background-position: 0 0;
+}
+
 /* Animation for healing tiles */
 @keyframes pulse {
   0% {

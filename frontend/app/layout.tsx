@@ -1,10 +1,20 @@
 // src/app/layout.tsx
 import "./globals.css";
 import { Inter } from "next/font/google";
+import { Press_Start_2P } from "next/font/google";
 import { GameProvider } from "@/context/GameContext";
 import { PetraWalletProvider } from "@/context/WalletProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+// Keep the Inter font for normal text
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+
+// Add Press Start 2P font for pixel text
+const pixelFont = Press_Start_2P({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-pixel",
+  display: "swap",
+});
 
 export const metadata = {
   title: "MakeAMove - Tactical Blockchain Strategy Game",
@@ -19,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.variable} ${pixelFont.variable} arcade-mode`}>
         <PetraWalletProvider>
           <GameProvider>{children}</GameProvider>
         </PetraWalletProvider>
