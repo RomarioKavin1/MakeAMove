@@ -1,18 +1,29 @@
 // src/app/page.tsx
 "use client";
 
-import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { usePetraWallet } from "@/context/WalletProvider";
+import ConnectButton from "@/components/petra/ConnectButton";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Enhanced background with animated gradient overlay */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 pixel-grid-bg"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/20 to-purple-900/20"></div>
-        <div className="absolute inset-0 animate-pulse-slow opacity-10 bg-gradient-radial from-indigo-500/30 to-transparent"></div>
-      </div>
+    <div className="relative flex flex-col min-h-screen bg-gray-900 text-white">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-gray-900 to-gray-900"></div>
+
+      {/* Header */}
+      <header className="relative z-10 p-6">
+        <nav className="flex justify-between items-center">
+          <div className="text-2xl font-bold pixel-text text-indigo-300">
+            MakeAMove
+          </div>
+          <div>
+            <ConnectButton />
+          </div>
+        </nav>
+      </header>
 
       <main className="relative z-10 flex-grow container mx-auto py-12 px-4 flex items-center justify-center">
         <div className="max-w-2xl text-center">
@@ -42,13 +53,7 @@ export default function Home() {
 
           {/* Action buttons with enhanced styling */}
           <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <Link
-              href="/battle"
-              className="arcade-btn bg-indigo-700 hover:bg-indigo-600 text-white px-10 py-4 text-lg relative group"
-            >
-              <span className="relative z-10">PLAY NOW</span>
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-            </Link>
+            <PlayNowButton />
             <Link
               href="/marketplace"
               className="arcade-btn bg-gray-800 hover:bg-gray-700 text-white px-10 py-4 text-lg relative group"
@@ -64,34 +69,128 @@ export default function Home() {
           </div>
 
           {/* Game feature indicators */}
-          <div className="mt-8 flex justify-center space-x-8">
-            <div className="text-xs text-indigo-300 pixel-text flex flex-col items-center">
-              <div className="w-10 h-10 mb-2 border border-indigo-500 flex items-center justify-center">
-                <div className="w-5 h-5 bg-indigo-500"></div>
+          <div className="mt-12 flex justify-center space-x-8">
+            <div className="text-center">
+              <div className="h-12 w-12 mx-auto bg-indigo-600 rounded-full flex items-center justify-center">
+                <div className="text-lg font-bold">🏆</div>
               </div>
-              <span>PVP BATTLES</span>
+              <p className="mt-2 text-sm text-gray-300">PVP Battles</p>
             </div>
-            <div className="text-xs text-indigo-300 pixel-text flex flex-col items-center">
-              <div className="w-10 h-10 mb-2 border border-indigo-500 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-indigo-500 transform rotate-45"></div>
+            <div className="text-center">
+              <div className="h-12 w-12 mx-auto bg-indigo-600 rounded-full flex items-center justify-center">
+                <div className="text-lg font-bold">🎴</div>
               </div>
-              <span>HEX STRATEGY</span>
+              <p className="mt-2 text-sm text-gray-300">Collectible Cards</p>
             </div>
-            <div className="text-xs text-indigo-300 pixel-text flex flex-col items-center">
-              <div className="w-10 h-10 mb-2 border border-indigo-500 flex items-center justify-center">
-                <div className="w-6 h-4 border border-indigo-500"></div>
+            <div className="text-center">
+              <div className="h-12 w-12 mx-auto bg-indigo-600 rounded-full flex items-center justify-center">
+                <div className="text-lg font-bold">⛓️</div>
               </div>
-              <span>NFT CARDS</span>
+              <p className="mt-2 text-sm text-gray-300">Blockchain Powered</p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Animated elements for visual interest */}
-      <div className="fixed top-10 left-10 w-5 h-5 bg-indigo-500 opacity-20 animate-pulse"></div>
-      <div className="fixed bottom-10 right-10 w-5 h-5 bg-purple-500 opacity-20 animate-pulse"></div>
-      <div className="fixed top-1/4 right-1/4 w-3 h-3 bg-indigo-300 opacity-10 animate-ping"></div>
-      <div className="fixed bottom-1/3 left-1/3 w-3 h-3 bg-purple-300 opacity-10 animate-ping"></div>
+      {/* Footer */}
+      <footer className="relative z-10 p-6 text-center text-gray-400 text-sm">
+        <p>&copy; 2023 MakeAMove. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
+
+// Custom PlayNowButton component that connects to the contract
+const PlayNowButton = () => {
+  const router = useRouter();
+  const { wallet, account, connected, connect } = usePetraWallet();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Contract address
+  const contractAddress =
+    "0x11e2d0c73089ef8d8a5758bd85c5a00101ab43b97123eae32e2dc8309cf880e4";
+
+  const handleClick = async () => {
+    // Clear previous states
+    setError(null);
+    setTxHash(null);
+
+    if (!connected) {
+      try {
+        await connect();
+      } catch (err) {
+        console.error("Failed to connect wallet:", err);
+        setError("Please connect your wallet to play.");
+        return;
+      }
+    }
+
+    // Ensure wallet is connected
+    if (!wallet || !account) {
+      setError("Please connect your wallet to play.");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Create payload for the create_game function
+      // For simplicity, we'll use a fixed AI agent address and have player start the game
+      const aiAgentAddress = "0x1"; // This would be replaced with an actual AI agent address in production
+      const playerStarts = true;
+
+      const payload = {
+        type: "entry_function_payload",
+        function: `${contractAddress}::make_a_move::create_game`,
+        type_arguments: [],
+        arguments: [aiAgentAddress, playerStarts],
+      };
+
+      // Sign and submit the transaction
+      const response = await wallet.signAndSubmitTransaction(payload);
+      setTxHash(response.hash);
+
+      // Wait for 2 seconds to simulate transaction completion
+      setTimeout(() => {
+        setIsProcessing(false);
+        // Navigate to the battle page after successful transaction
+        router.push("/battle");
+      }, 2000);
+    } catch (err) {
+      console.error("Transaction failed:", err);
+      setIsProcessing(false);
+      setError("Failed to create game. Please try again.");
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleClick}
+        disabled={isProcessing}
+        className={`arcade-btn bg-indigo-700 hover:bg-indigo-600 text-white px-10 py-4 text-lg relative group ${
+          isProcessing ? "opacity-70 cursor-not-allowed" : ""
+        }`}
+      >
+        <span className="relative z-10">
+          {isProcessing ? "PROCESSING..." : "PLAY NOW"}
+        </span>
+        <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+      </button>
+
+      {error && (
+        <div className="absolute top-full left-0 right-0 mt-2 text-red-400 text-sm text-center">
+          {error}
+        </div>
+      )}
+
+      {txHash && (
+        <div className="absolute top-full left-0 right-0 mt-2 text-green-400 text-xs text-center">
+          Transaction submitted! Hash: {txHash.substring(0, 10)}...
+        </div>
+      )}
+    </div>
+  );
+};

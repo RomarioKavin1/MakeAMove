@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { Press_Start_2P } from "next/font/google";
 import { GameProvider } from "@/context/GameContext";
 import { PetraWalletProvider } from "@/context/WalletProvider";
+import WalletConnectButton from "@/components/petra/ConnectButton";
 
 // Keep the Inter font for normal text
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
