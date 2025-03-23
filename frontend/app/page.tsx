@@ -6,8 +6,24 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { usePetraWallet } from "@/context/WalletProvider";
 import ConnectButton from "@/components/petra/ConnectButton";
+import { LogOut } from "lucide-react";
 
 export default function Home() {
+  const { connected, disconnect } = usePetraWallet();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleDisconnect = async () => {
+    try {
+      setIsLoading(true);
+      await disconnect();
+      console.log("Wallet disconnected successfully");
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="relative flex flex-col min-h-screen bg-gray-900 text-white">
       {/* Background Pattern */}
@@ -15,21 +31,38 @@ export default function Home() {
 
       {/* Header */}
       <header className="relative z-10 p-6">
-        <nav className="flex justify-between items-center">
+        <nav className="flex justify-between items-center relative z-1">
           <div className="text-2xl font-bold pixel-text text-indigo-300">
             MakeAMove
           </div>
-          <div>
+          <div className="flex items-center space-x-4">
             <ConnectButton />
+            {connected && (
+              <button
+                onClick={handleDisconnect}
+                disabled={isLoading}
+                className="arcade-btn bg-red-700 hover:bg-red-600 text-white px-4 py-2 text-sm relative group"
+                data-testid="landing-disconnect-btn"
+              >
+                {isLoading ? (
+                  <span className="animate-pulse pixel-text">
+                    DISCONNECTING...
+                  </span>
+                ) : (
+                  <span className="relative z-10 pixel-text">DISCONNECT</span>
+                )}
+                <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+              </button>
+            )}
           </div>
         </nav>
       </header>
 
-      <main className="relative z-10 flex-grow container mx-auto py-12 px-4 flex items-center justify-center">
+      <main className="relative  flex-grow container mx-auto py-12 px-4 flex items-center justify-center z-0">
         <div className="max-w-2xl text-center">
           {/* Logo area with enhanced styling */}
           <div className="mb-16 transform hover:scale-105 transition duration-500">
-            <h1 className="text-6xl sm:text-7xl pixel-text text-white text-glow mb-3">
+            <h1 className="text-6xl sm:text-7xl pixel-text text-white text-glow mb-3 z-10">
               MakeAMove
             </h1>
             <p className="text-indigo-300 pixel-text text-sm sm:text-base tracking-widest">
@@ -93,9 +126,6 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 p-6 text-center text-gray-400 text-sm">
-        <p>&copy; 2023 MakeAMove. All rights reserved.</p>
-      </footer>
     </div>
   );
 }

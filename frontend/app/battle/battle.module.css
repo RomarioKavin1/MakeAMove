@@ -1,142 +1,112 @@
 /* Battle.module.css */
 
-/* Container styles */
+/* Container styles - Fixed height, no scrolling */
 .battleContainer {
   position: relative;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: #000;
+  overflow: hidden !important; /* Prevent scrolling */
 }
 
 /* Header styles */
 .battleHeader {
   position: relative;
   z-index: 10;
-  padding: 1rem;
-  border-bottom: 2px solid #4f46e5;
-  background-color: rgba(17, 24, 39, 0.9);
-}
-
-.headerContent {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 0 auto;
-}
-
-.logoText {
-  font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 1.5rem;
-  color: #818cf8;
-  text-shadow: 0 0 8px #818cf8, 0 0 12px #818cf8;
-}
-
-.turnIndicator {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}
-
-.turnCounter {
-  padding: 0.25rem 0.75rem;
-  background-color: #3730a3;
-  border: 2px solid #4f46e5;
-  color: white;
-  font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
-}
-
-.playerTurn {
-  padding: 0.25rem 0.75rem;
-  background-color: #1e40af;
-  border: 2px solid #3b82f6;
-  color: #bfdbfe;
-  font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
-}
-
-.aiTurn {
-  padding: 0.25rem 0.75rem;
-  background-color: #7f1d1d;
-  border: 2px solid #dc2626;
-  color: #fecaca;
-  font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
-}
-
-/* Message box */
-.messageBox {
-  position: relative;
-  z-index: 10;
-  background-color: rgba(17, 24, 39, 0.8);
-  border-bottom: 2px solid #4f46e5;
-  color: #4ade80;
-  padding: 0.5rem;
+  padding: 0.25rem;
   text-align: center;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-.aiMessage {
-  position: relative;
-  z-index: 10;
-  background-color: rgba(127, 29, 29, 0.8);
-  border-top: 2px solid #dc2626;
-  border-bottom: 2px solid #dc2626;
-  color: #fecaca;
-  padding: 0.5rem;
-  text-align: center;
-  font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   letter-spacing: 0.05em;
   animation: pulse 2s infinite;
+  flex-shrink: 0;
+  height: 30px; /* Fixed height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Main game area */
 .gameArea {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
   position: relative;
   z-index: 10;
+  flex: 1;
+  overflow: hidden; /* Prevent scrolling */
 }
 
 .hexGridContainer {
-  flex: 1;
+  width: 100%;
+  height: 100%;
   position: relative;
+  overflow: hidden; /* Prevent scrolling */
 }
 
-/* Card sidebar */
-.cardSidebar {
-  width: 18rem;
-  background-color: rgba(17, 24, 39, 0.9);
-  border-left: 2px solid #4f46e5;
-  padding: 1rem;
-  overflow-y: auto;
-}
-
-.sidebarTitle {
-  color: white;
-  font-size: 1rem;
+/* Card drawer toggle button */
+.drawerToggle {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background-color: #1f2937;
+  color: #818cf8;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  margin-bottom: 1rem;
-  text-align: center;
-  border-bottom: 2px solid #4f46e5;
-  padding-bottom: 0.5rem;
+  font-size: 0.7rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-top: 2px solid #4f46e5;
+  border-left: 2px solid #4f46e5;
+  border-right: 2px solid #4f46e5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.drawerToggle:hover {
+  background-color: #374151;
+  color: white;
+}
+
+.drawerToggle.drawerOpen {
+  bottom: 150px; /* Height of the card drawer */
+}
+
+/* Card drawer */
+.cardDrawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -150px; /* Hidden by default */
+  height: 150px;
+  background-color: rgba(17, 24, 39, 0.9);
+  border-top: 2px solid #4f46e5;
+  z-index: 20;
+  transition: bottom 0.3s ease;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardDrawer.drawerOpen {
+  bottom: 0; /* Visible when open */
 }
 
 .cardList {
   display: flex;
-  flex-direction: column;
   gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem;
+  max-width: 100%;
 }
 
 .cardWrapper {
   transition: all 0.2s ease;
   border: 2px solid #1f2937;
   background-color: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
 }
 
 .cardWrapperSelected {
@@ -144,18 +114,28 @@
   border: 2px solid #818cf8;
 }
 
+/* Battle controls - Fixed position at bottom right */
+.battleControls {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 20; /* Ensure it's above other elements */
+}
+
 /* Tile details panel */
 .tileDetails {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  margin: 1rem;
+  bottom: 1rem;
+  left: 1rem;
   max-width: 24rem;
   background-color: rgba(17, 24, 39, 0.9);
   border: 2px solid #4f46e5;
   color: white;
-  padding: 1rem;
+  padding: 0.75rem;
   animation: slideUp 0.3s ease-out forwards;
+  max-height: 70vh; /* Ensure it doesn't cover too much of the screen */
+  overflow-y: auto;
+  z-index: 15;
 }
 
 .tileDetailsHeader {
@@ -174,6 +154,9 @@
 .closeButton {
   color: white;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .closeButton:hover {
@@ -190,7 +173,7 @@
   grid-column: span 2;
   margin-bottom: 0.5rem;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #a5b4fc;
 }
 
@@ -199,7 +182,7 @@
   padding: 0.5rem;
   background-color: #1f2937;
   border: 1px solid #4f46e5;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .terrainHeader {
@@ -218,12 +201,12 @@
   font-weight: 600;
   text-transform: uppercase;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #a5b4fc;
 }
 
 .terrainDescription {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #d1d5db;
 }
 
@@ -233,7 +216,7 @@
   padding: 0.5rem;
   background-color: #1f2937;
   border: 1px solid #4f46e5;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .entityHeader {
@@ -245,7 +228,7 @@
 .entityName {
   font-weight: 600;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #a5b4fc;
 }
 
@@ -264,7 +247,7 @@
 .healthText {
   font-weight: 700;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
 }
 
 .healthBar {
@@ -299,6 +282,7 @@
   align-items: center;
   justify-content: center;
   margin-right: 0.5rem;
+  border: 1px solid;
 }
 
 .statIcon svg {
@@ -315,7 +299,7 @@
   display: block;
   color: #9ca3af;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
-  font-size: 0.75rem;
+  font-size: 0.65rem;
 }
 
 .statValue {
@@ -334,6 +318,7 @@
   padding: 0.25rem 0.5rem;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
   font-size: 0.65rem;
+  text-align: center;
 }
 
 .canMove {
@@ -368,7 +353,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 20;
+  z-index: 50;
 }
 
 .gameOverBox {
@@ -390,7 +375,7 @@
 }
 
 .gameOverTitle {
-  font-size: 1.875rem;
+  font-size: 1.75rem;
   font-family: var(--font-pixel, "Press Start 2P", monospace);
   text-align: center;
   margin-bottom: 1.5rem;
@@ -421,7 +406,9 @@
   padding: 0.75rem 1.5rem;
   font-size: 0.875rem;
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
-  overflow: hidden;
+  border: none;
+  outline: 2px solid #6366f1;
+  cursor: pointer;
 }
 
 .playAgainButton:hover {
@@ -447,6 +434,8 @@
   background-position: 0 0;
 }
 
+/* Force prevent body scrolling when in game */
+
 /* Animations */
 @keyframes pulse {
   0%,
@@ -468,3 +457,181 @@
     opacity: 1;
   }
 }
+
+/* Header styles */
+.battleHeader {
+  position: relative;
+  z-index: 10;
+  padding: 0.75rem;
+  border-bottom: 2px solid #4f46e5;
+  background-color: rgba(17, 24, 39, 0.9);
+  flex-shrink: 0;
+  height: 60px; /* Fixed height */
+  display: flex;
+  align-items: center;
+}
+
+.headerContent {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.logoText {
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 1.25rem;
+  color: #818cf8;
+  text-shadow: 0 0 8px #818cf8, 0 0 12px #818cf8;
+}
+
+.turnIndicator {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.turnCounter {
+  padding: 0.25rem 0.75rem;
+  background-color: #3730a3;
+  border: 2px solid #4f46e5;
+  color: white;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+}
+
+.playerTurn {
+  padding: 0.25rem 0.75rem;
+  background-color: #1e40af;
+  border: 2px solid #3b82f6;
+  color: #bfdbfe;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+}
+
+.aiTurn {
+  padding: 0.25rem 0.75rem;
+  background-color: #7f1d1d;
+  border: 2px solid #dc2626;
+  color: #fecaca;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+}
+
+/* Message box */
+.messageBox {
+  position: relative;
+  z-index: 10;
+  background-color: rgba(17, 24, 39, 0.8);
+  border-bottom: 2px solid #4f46e5;
+  color: #4ade80;
+  padding: 0.25rem;
+  text-align: center;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  height: 30px; /* Fixed height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.aiMessage {
+  position: relative;
+  z-index: 10;
+  background-color: rgba(127, 29, 29, 0.8);
+  border-top: 2px solid #dc2626;
+  border-bottom: 2px solid #dc2626;
+  color: #fecaca;
+  padding: 0.25rem;
+  text-align: center;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Main game area */
+.gameArea {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  overflow: hidden;
+}
+
+.hexGridContainer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Card drawer toggle button */
+.drawerToggle {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background-color: #1f2937;
+  color: #818cf8;
+  font-family: var(--font-pixel, "Press Start 2P", monospace);
+  font-size: 0.7rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  border-top: 2px solid #4f46e5;
+  border-left: 2px solid #4f46e5;
+  border-right: 2px solid #4f46e5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.drawerToggle:hover {
+  background-color: #374151;
+  color: white;
+}
+
+.drawerToggle.drawerOpen {
+  bottom: 150px;
+}
+
+/* Card drawer */
+.cardDrawer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -150px;
+  height: 150px;
+  background-color: rgba(17, 24, 39, 0.9);
+  border-top: 2px solid #4f46e5;
+  z-index: 20;
+  transition: bottom 0.3s ease;
+  padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cardDrawer.drawerOpen {
+  bottom: 0;
+}
+
+.cardList {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding: 0.5rem;
+  max-width: 100%;
+}
+/* Main game area */
+
+/* Card drawer toggle button */
+
+/* Card drawer */

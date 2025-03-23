@@ -30,10 +30,30 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script src="/js/fix-modal.js" async></script>
+        <style>{`
+          #modal-frame {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            pointer-events: none;
+            z-index: 2147483647;
+          }
+        `}</style>
+      </head>
       <body className={`${inter.variable} ${pixelFont.variable} arcade-mode`}>
         <PetraWalletProvider>
           <GameProvider>{children}</GameProvider>
         </PetraWalletProvider>
+        <div
+          id="modal-root"
+          style={{ position: "relative", zIndex: 2147483647 }}
+        ></div>
+        <iframe id="modal-frame" title="Modal Container"></iframe>
       </body>
     </html>
   );
