@@ -45,7 +45,7 @@ export const PetraWalletProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // Check if already connected
+  // Check if already connected and set up event listeners
   useEffect(() => {
     const checkConnection = async () => {
       if (wallet) {
@@ -62,6 +62,11 @@ export const PetraWalletProvider = ({ children }: { children: ReactNode }) => {
             } catch (e) {
               console.warn("Could not get network info", e);
             }
+          } else {
+            // Reset state if wallet is not connected
+            setConnected(false);
+            setAccount(null);
+            setNetwork(null);
           }
         } catch (e) {
           console.error("Error checking connection", e);
@@ -69,7 +74,30 @@ export const PetraWalletProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    // Initial check
     checkConnection();
+
+    // Set up event listeners for account changes
+    const handleAccountChange = async () => {
+      await checkConnection();
+    };
+
+    // Add event listeners if wallet is available
+    if (wallet) {
+      try {
+        // Different wallets may use slightly different event names
+        window.addEventListener("aptos:disconnect", handleAccountChange);
+        window.addEventListener("aptos:accountChanged", handleAccountChange);
+      } catch (e) {
+        console.warn("Could not add event listeners for wallet events", e);
+      }
+    }
+
+    return () => {
+      // Clean up event listeners
+      window.removeEventListener("aptos:disconnect", handleAccountChange);
+      window.removeEventListener("aptos:accountChanged", handleAccountChange);
+    };
   }, [wallet]);
 
   // Connect function

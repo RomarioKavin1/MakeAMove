@@ -99,8 +99,88 @@ body.arcade-mode {
   }
 }
 
+/* Animation for fadeIn effect */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
 .animate-pulse {
   animation: pulse 2s infinite;
+}
+
+/* Wallet button styling for landing page */
+.landing-page-wallet-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+}
+
+.landing-page-wallet-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Disconnect button styling */
+.disconnect-wallet-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.disconnect-wallet-btn:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+  font-weight: 500;
+}
+
+.disconnect-wallet-btn:active {
+  transform: scale(0.98);
+}
+
+/* Toast notification styling */
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 16px;
+  border-radius: 0;
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  animation: slideIn 0.3s ease forwards;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.toast-success {
+  background-color: #10b981;
+  color: white;
+}
+
+.toast-error {
+  background-color: #ef4444;
+  color: white;
 }
 
 /* Text shadow for better readability on map */
@@ -111,6 +191,56 @@ body.arcade-mode {
 /* Scale hover effect for cards */
 .hover\:scale-102:hover {
   transform: scale(1.02);
+}
+
+/* Pixelated shadow for modals and elements */
+.pixelated-shadow {
+  box-shadow: 6px 6px 0px #000, 6px 6px 0px 2px rgba(79, 70, 229, 0.5);
+  position: relative;
+}
+
+.pixelated-shadow::after {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border: 2px solid rgba(79, 70, 229, 0.2);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Pixel pattern background for modals */
+.pixel-pattern {
+  background-color: #1a1a2e;
+  background-image: linear-gradient(rgba(79, 70, 229, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(79, 70, 229, 0.1) 1px, transparent 1px);
+  background-size: 8px 8px;
+  background-position: -1px -1px;
+}
+
+/* Modal handling with proper stacking context */
+#__next,
+.app-root {
+  isolation: isolate;
+  position: relative;
+  z-index: 1;
+}
+
+.modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99990 !important;
+  isolation: isolate !important;
+}
+
+.modal-content {
+  position: relative !important;
+  z-index: 99999 !important;
+  isolation: isolate !important;
+  transform: translateZ(0) !important;
+  will-change: transform !important;
 }
 
 /* Responsive design adjustments */
