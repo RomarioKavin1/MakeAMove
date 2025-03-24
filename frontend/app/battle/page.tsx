@@ -9,6 +9,7 @@ import { getPlacementPositions } from "@/lib/hexUtils";
 import styles from "./Battle.module.css";
 import { Position } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
+import ConnectButton from "@/components/petra/ConnectButton";
 
 const BattlePage: React.FC = () => {
   const { state, dispatch } = useGame();
@@ -31,15 +32,19 @@ const BattlePage: React.FC = () => {
   const [placementTiles, setPlacementTiles] = useState<Position[]>([]);
   const [tileDetailsOpen, setTileDetailsOpen] = useState<boolean>(false);
   const [attackTarget, setAttackTarget] = useState<Position | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState<boolean>(false);
+
+  // Toggle the card drawer
+  const toggleDrawer = () => {
+    setDrawerOpen(!drawerOpen);
+  };
 
   // Update when selectedTile or possibleAttacks changes
   useEffect(() => {
     if (possibleAttacks.length > 0 && selectedTile?.unit) {
       setAttackTarget(possibleAttacks[0]);
-      console.log("Possible attacks:", possibleAttacks);
     } else {
       setAttackTarget(null);
-      console.log("Possible attacks:", possibleAttacks);
     }
   }, [selectedTile, possibleAttacks]);
 
@@ -174,6 +179,7 @@ const BattlePage: React.FC = () => {
 
       if (isValidPlacement) {
         dispatch({ type: "PLACE_UNIT", payload: tile.position });
+        setDrawerOpen(false); // Close drawer after placing unit
       }
       return;
     }
@@ -182,8 +188,6 @@ const BattlePage: React.FC = () => {
     if (tile.unit && tile.unit.owner === "player") {
       // Select the unit - this will calculate possible moves/attacks
       dispatch({ type: "SELECT_TILE", payload: tile });
-
-      // The possibleAttacks array will be updated in the reducer
       return;
     }
 
@@ -195,10 +199,6 @@ const BattlePage: React.FC = () => {
       );
 
       if (isAttackTarget) {
-        console.log(
-          `Attacking target at (${tile.position.q}, ${tile.position.r})`
-        );
-
         // Start attack animation
         dispatch({
           type: "UNIT_ANIMATION_START",
@@ -308,6 +308,7 @@ const BattlePage: React.FC = () => {
       {/* Game header with turn info */}
       <header className={styles.battleHeader}>
         <div className={styles.headerContent}>
+          <ConnectButton />
           <h1 className={styles.logoText}>MakeAMove</h1>
           <div className={styles.turnIndicator}>
             <div className={styles.turnCounter}>
@@ -349,9 +350,9 @@ const BattlePage: React.FC = () => {
             unitAnimations={unitAnimations} // Pass the unitAnimations from state
           />
 
-          {/* Battle controls (only visible during battle phase) */}
+          {/* Battle controls */}
           {gameState.phase === "battle" && (
-            <div className="absolute bottom-4 right-4">
+            <div className={styles.battleControls}>
               <BattleControls
                 onEndTurn={handleEndTurn}
                 onAttack={handleAttack}
@@ -366,29 +367,42 @@ const BattlePage: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
 
-        {/* Right sidebar (card hand) */}
-        <div className={styles.cardSidebar}>
-          <h2 className={styles.sidebarTitle}>YOUR CARDS</h2>
-          <div className={styles.cardList}>
-            {playerHand.map((card) => (
-              <div
-                key={card.instanceId}
-                className={`${styles.cardWrapper} ${
-                  selectedCard?.instanceId === card.instanceId
-                    ? styles.cardWrapperSelected
-                    : ""
-                }`}
-              >
-                <Card
-                  card={card}
-                  onClick={() => handleCardSelect(card)}
-                  isSelected={selectedCard?.instanceId === card.instanceId}
-                  size="sm"
-                />
-              </div>
-            ))}
-          </div>
+      {/* Card drawer toggle button */}
+      <button
+        className={`${styles.drawerToggle} ${
+          drawerOpen ? styles.drawerOpen : ""
+        }`}
+        onClick={toggleDrawer}
+      >
+        {drawerOpen ? "▼ CLOSE CARDS ▼" : "▲ YOUR CARDS ▲"}
+      </button>
+
+      {/* Card drawer (slides up from bottom) */}
+      <div
+        className={`${styles.cardDrawer} ${
+          drawerOpen ? styles.drawerOpen : ""
+        }`}
+      >
+        <div className={styles.cardList}>
+          {playerHand.map((card) => (
+            <div
+              key={card.instanceId}
+              className={`${styles.cardWrapper} ${
+                selectedCard?.instanceId === card.instanceId
+                  ? styles.cardWrapperSelected
+                  : ""
+              }`}
+            >
+              <Card
+                card={card}
+                onClick={() => handleCardSelect(card)}
+                isSelected={selectedCard?.instanceId === card.instanceId}
+                size="sm"
+              />
+            </div>
+          ))}
         </div>
       </div>
 
