@@ -11,6 +11,7 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { HumanMessage } from "@langchain/core/messages";
 import { MemorySaver } from "@langchain/langgraph";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
+import { DynamicTool } from "@langchain/core/tools";
 import { GameState, Position, HexTile } from "./types/Game";
 import { CardInstance } from "./types/Card";
 
@@ -652,9 +653,27 @@ export const createGameAIAgent = async () => {
   });
   const memory = new MemorySaver();
 
+  // Create properly formatted tools for LangChain
+  const formattedTools = combinedTools.map((toolDef) => {
+    return new DynamicTool({
+      name: toolDef.name,
+      description: toolDef.description,
+      func: async (input: string) => {
+        try {
+          // Parse the input string to an object
+          const inputObj = JSON.parse(input);
+          return await (toolDef.handler as any)(inputObj);
+        } catch (error) {
+          // If parsing fails, try using the string directly
+          return await (toolDef.handler as any)(input);
+        }
+      },
+    });
+  });
+
   const agent = createReactAgent({
     llm,
-    tools: combinedTools,
+    tools: formattedTools,
     checkpointSaver: memory,
     messageModifier: `
         You are an AI agent that plays a hexagonal strategy game on the Aptos blockchain.
@@ -722,6 +741,35 @@ export const runAIGameTurn = async (
 export const main = async () => {
   console.log("Initializing Aptos Game AI Agent...");
 
+  // Parse command line arguments if provided
+  const args = process.argv.slice(2);
+
+  if (args.length > 0) {
+    try {
+      // Parse the input data from the command line argument
+      const inputData = JSON.parse(args[0]);
+      const { gameState, tiles, aiUnits, aiCards, gridSize } = inputData;
+
+      // Run the AI agent for a game turn
+      const aiResponse = await runAIGameTurn(gameState, tiles, gridSize);
+
+      // Output the result as JSON for the API to consume
+      console.log(
+        JSON.stringify({
+          tiles: tiles, // Would need to modify runAIGameTurn to return updated tiles
+          aiUnits: aiUnits, // Would need to modify runAIGameTurn to return updated AI units
+          message: aiResponse,
+        })
+      );
+
+      return;
+    } catch (error) {
+      console.error("Error processing input data:", error);
+      process.exit(1);
+    }
+  }
+
+  // Fallback to default behavior if no arguments
   // Set up your game state here
   const gameState: GameState = {
     turn: 1,
