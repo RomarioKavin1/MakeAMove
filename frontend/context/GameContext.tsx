@@ -5,6 +5,7 @@ import React, {
   useReducer,
   ReactNode,
   useEffect,
+  useState,
 } from "react";
 import { Card, CardInstance, CardType } from "@/types/Card";
 import {
@@ -25,6 +26,7 @@ import {
 } from "@/lib/hexUtils";
 import { sampleCards } from "@/lib/cardUtils";
 import { runMockAI } from "@/lib/mockAI";
+import { runAIAgent } from "@/lib/aiAgent";
 import { GameState, Position, UnitAnimation } from "@/types/Game";
 import { HexTile } from "@/types/Terrain";
 
@@ -588,10 +590,26 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [useRealAI, setUseRealAI] = useState<boolean>(false);
 
   // Initialize game when component mounts
   useEffect(() => {
     dispatch({ type: "INITIALIZE_GAME" });
+
+    // Check if we should use the real AI
+    // You can toggle this with a UI control or environment variable
+    const checkRealAI = async () => {
+      try {
+        const response = await fetch("/api/check-ai-availability");
+        const data = await response.json();
+        setUseRealAI(data.available);
+      } catch (error) {
+        console.error("Error checking AI availability:", error);
+        setUseRealAI(false);
+      }
+    };
+
+    checkRealAI();
   }, []);
 
   // Handle AI turn logic when it's the AI's turn
@@ -601,29 +619,59 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
       state.gameState.phase === "battle"
     ) {
       // Delay to simulate AI thinking
-      const aiTurnTimer = setTimeout(() => {
-        // Run the mock AI
-        const { tiles, aiUnits, message } = runMockAI(
-          state.gameState,
-          state.tiles,
-          state.aiUnits,
-          state.aiHand
-        );
+      const aiTurnTimer = setTimeout(async () => {
+        try {
+          let tiles, aiUnits, message;
 
-        // Update state with AI's action
-        dispatch({
-          type: "AI_ACTION",
-          payload: {
-            tiles,
-            aiUnits,
-            message,
-          },
-        });
+          if (useRealAI) {
+            // Use the real AI agent
+            console.log("Using real AI agent...");
+            const result = await runAIAgent(
+              state.gameState,
+              state.tiles,
+              state.aiUnits,
+              state.aiHand,
+              state.gridSize
+            );
 
-        // End AI turn after a short delay
-        setTimeout(() => {
+            tiles = result.tiles;
+            aiUnits = result.aiUnits;
+            message = result.message;
+          } else {
+            // Fall back to the mock AI
+            console.log("Using mock AI...");
+            const result = runMockAI(
+              state.gameState,
+              state.tiles,
+              state.aiUnits,
+              state.aiHand
+            );
+
+            tiles = result.tiles;
+            aiUnits = result.aiUnits;
+            message = result.message;
+          }
+
+          // Update state with AI's action
+          dispatch({
+            type: "AI_ACTION",
+            payload: {
+              tiles,
+              aiUnits,
+              message,
+            },
+          });
+
+          // End AI turn after a short delay
+          setTimeout(() => {
+            dispatch({ type: "END_AI_TURN" });
+          }, 1500);
+        } catch (error) {
+          console.error("Error during AI turn:", error);
+
+          // End AI turn even if there was an error
           dispatch({ type: "END_AI_TURN" });
-        }, 1500);
+        }
       }, 1500);
 
       return () => clearTimeout(aiTurnTimer);
@@ -634,6 +682,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({
     state.tiles,
     state.aiUnits,
     state.aiHand,
+    state.gridSize,
+    useRealAI,
   ]);
 
   return (

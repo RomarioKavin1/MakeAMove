@@ -1,4 +1,5 @@
 import { Card } from "./Card";
+import { CardInstance } from "./Card";
 
 // src/types/Game.ts
 export type Position = {
@@ -10,8 +11,10 @@ export type GameState = {
   turn: number;
   maxTurns: number;
   currentPlayer: "player" | "ai";
-  phase: "setup" | "battle" | "gameOver";
+  phase: "setup" | "battle" | "complete";
   winner: "player" | "ai" | null;
+  startTime?: number;
+  gameId?: string;
 };
 
 export type AnimationState = "idle" | "attack" | "walk";
@@ -22,6 +25,7 @@ export interface UnitAnimation {
   target?: Position;
   direction: AnimationDirection;
 }
+
 export type CardInstance = Card & {
   instanceId: string;
   position: Position | null;
@@ -30,11 +34,12 @@ export type CardInstance = Card & {
   hasMoved: boolean;
   owner: "player" | "ai"; // This is the property being added
 };
+
 export interface Fortress {
   id: string;
-  owner: "player" | "ai";
   health: number;
   maxHealth: number;
+  owner: "player" | "ai";
   position: Position;
 }
 
