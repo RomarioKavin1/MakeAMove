@@ -6,6 +6,19 @@ import {
   getPossibleMoves,
   getPossibleAttackTargets,
 } from "./hexUtils";
+// We'll need to install this package with npm first
+// import { AptosClient } from "@aptos-labs/ts-sdk";
+
+// Constants for the Aptos smart contract
+const CONTRACT_ADDRESS = "0x1"; // Replace with your deployed contract address
+const MODULE_NAME = "make_a_move";
+const CREATE_GAME_FUNCTION = "create_game";
+const FINISH_GAME_FUNCTION = "finish_game";
+
+// Initialize Aptos client - commented out until package is installed
+// const aptosClient = new AptosClient(
+//   process.env.NEXT_PUBLIC_APTOS_NODE_URL || "https://fullnode.devnet.aptoslabs.com/v1"
+// );
 
 // Initialize a new game state
 export const initializeGame = (
@@ -565,4 +578,165 @@ export const performAttackWithAnimation = (
   }, 800); // Animation duration
 
   return result;
+};
+
+// Update GameState interface to include startTime
+export interface ExtendedGameState extends GameState {
+  startTime?: number;
+}
+
+// Start a new game and record it on the blockchain
+export const startGameOnBlockchain = async (
+  signer: any,
+  aiAgentAddress: string,
+  playerStarts: boolean,
+  gridSize: number = 5,
+  maxTurns: number = 20,
+  gameMode: string = "standard",
+  deckSize: number = 8
+): Promise<string> => {
+  try {
+    // Validate input parameters
+    if (!signer || !aiAgentAddress) {
+      throw new Error("Missing required parameters");
+    }
+
+    // Construct the transaction payload
+    const payload = {
+      type: "entry_function_payload",
+      function: `${CONTRACT_ADDRESS}::${MODULE_NAME}::${CREATE_GAME_FUNCTION}`,
+      type_arguments: [],
+      arguments: [
+        aiAgentAddress,
+        playerStarts,
+        gridSize,
+        maxTurns,
+        gameMode,
+        deckSize,
+      ],
+    };
+
+    // Submit the transaction
+    const response = await signer.signAndSubmitTransaction(payload);
+
+    // Wait for transaction confirmation - commented out until package is installed
+    // await aptosClient.waitForTransaction({
+    //   transactionHash: response.hash,
+    // });
+
+    // The game ID would typically be emitted in an event
+    // For simplicity, we're returning the transaction hash here
+    return response.hash;
+  } catch (error) {
+    console.error("Error starting game on blockchain:", error);
+    throw error;
+  }
+};
+
+// End a game and record final state on the blockchain
+export const finishGameOnBlockchain = async (
+  signer: any,
+  gameId: string,
+  winner: string,
+  gameState: ExtendedGameState,
+  tiles: HexTile[]
+): Promise<boolean> => {
+  try {
+    // Validate input parameters
+    if (!signer || !gameId || !winner) {
+      throw new Error("Missing required parameters");
+    }
+
+    // Count remaining units
+    const playerUnits = tiles.filter(
+      (tile) => tile.unit && tile.unit.owner === "player"
+    ).length;
+    const aiUnits = tiles.filter(
+      (tile) => tile.unit && tile.unit.owner === "ai"
+    ).length;
+
+    // Calculate total score (example calculation - customize as needed)
+    const playerScore = calculatePlayerScore(gameState, tiles);
+
+    // Calculate game duration (using startTime if available)
+    const gameDuration = gameState.startTime
+      ? Math.floor((Date.now() - gameState.startTime) / 1000)
+      : 0;
+
+    // Construct the transaction payload
+    const payload = {
+      type: "entry_function_payload",
+      function: `${CONTRACT_ADDRESS}::${MODULE_NAME}::${FINISH_GAME_FUNCTION}`,
+      type_arguments: [],
+      arguments: [
+        gameId,
+        winner,
+        playerUnits,
+        aiUnits,
+        gameState.turn,
+        playerScore,
+        gameDuration,
+      ],
+    };
+
+    // Submit the transaction
+    const response = await signer.signAndSubmitTransaction(payload);
+
+    // Wait for transaction confirmation - commented out until package is installed
+    // await aptosClient.waitForTransaction({
+    //   transactionHash: response.hash,
+    // });
+
+    return true;
+  } catch (error) {
+    console.error("Error finishing game on blockchain:", error);
+    return false;
+  }
+};
+
+// Calculate a score for the player based on game state
+const calculatePlayerScore = (
+  gameState: ExtendedGameState,
+  tiles: HexTile[]
+): number => {
+  // Count player units and their total health
+  let totalUnits = 0;
+  let totalHealth = 0;
+  let totalAttack = 0;
+
+  tiles.forEach((tile) => {
+    if (tile.unit && tile.unit.owner === "player") {
+      totalUnits++;
+      totalHealth += tile.unit.health;
+      totalAttack += tile.unit.attack;
+    }
+  });
+
+  // Count player fortresses and their total health
+  let totalFortresses = 0;
+  let totalFortressHealth = 0;
+
+  tiles.forEach((tile) => {
+    if (tile.fortress && tile.fortress.owner === "player") {
+      totalFortresses++;
+      totalFortressHealth += tile.fortress.health;
+    }
+  });
+
+  // Calculate bonus for winning early
+  const turnBonus =
+    gameState.winner === "player"
+      ? Math.max(0, gameState.maxTurns - gameState.turn) * 10
+      : 0;
+
+  // Calculate total score
+  const score =
+    totalUnits * 100 +
+    totalHealth * 5 +
+    totalAttack * 10 +
+    totalFortresses * 500 +
+    totalFortressHealth * 2 +
+    turnBonus;
+
+  return score;
 };

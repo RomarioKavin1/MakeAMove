@@ -64,6 +64,10 @@ module make_a_move_addr::make_a_move {
         game_id: u64,
         player: address,
         ai_agent: address,
+        grid_size: u8,
+        max_turns: u64,
+        game_mode: String,
+        deck_size: u64,
         timestamp: u64,
     }
 
@@ -71,6 +75,11 @@ module make_a_move_addr::make_a_move {
     struct GameFinished has drop, store {
         game_id: u64,
         winner: address,
+        player_units_remaining: u64,
+        ai_units_remaining: u64,
+        total_turns_played: u64,
+        final_score: u64,
+        game_duration_seconds: u64,
         timestamp: u64,
     }
 
@@ -84,7 +93,11 @@ module make_a_move_addr::make_a_move {
     public entry fun create_game(
         creator: &signer,
         ai_agent: address,
-        player_starts: bool
+        player_starts: bool,
+        grid_size: u8,
+        max_turns: u64,
+        game_mode: String,
+        deck_size: u64
     ) acquires GameStore {
         let creator_addr = signer::address_of(creator);
         
@@ -117,11 +130,15 @@ module make_a_move_addr::make_a_move {
         // Increment next game id
         game_store.next_game_id = game_store.next_game_id + 1;
         
-        // Emit game created event
+        // Emit game created event with additional parameters
         event::emit(GameCreated {
             game_id,
             player: creator_addr,
             ai_agent,
+            grid_size,
+            max_turns,
+            game_mode,
+            deck_size,
             timestamp: timestamp::now_seconds(),
         });
     }
@@ -381,7 +398,12 @@ module make_a_move_addr::make_a_move {
     public entry fun finish_game(
         player: &signer,
         game_id: u64,
-        winner: address
+        winner: address,
+        player_units_remaining: u64,
+        ai_units_remaining: u64,
+        total_turns_played: u64,
+        final_score: u64,
+        game_duration_seconds: u64
     ) acquires GameStore {
         let player_addr = signer::address_of(player);
         
@@ -414,6 +436,11 @@ module make_a_move_addr::make_a_move {
         event::emit(GameFinished {
             game_id,
             winner,
+            player_units_remaining,
+            ai_units_remaining,
+            total_turns_played,
+            final_score,
+            game_duration_seconds,
             timestamp: timestamp::now_seconds(),
         });
     }
